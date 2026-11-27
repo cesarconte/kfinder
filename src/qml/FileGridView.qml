@@ -11,11 +11,12 @@ Item {
     property var selectedUrls: []
     property var selectedItems: []
     property int currentIndex: -1
+    property int iconSize: 64
 
     signal itemClicked(var item)
     signal itemDoubleClicked(var item)
-    signal itemContextMenuRequested(var item, real mouseX, real mouseY)
-    signal backgroundContextMenuRequested(real mouseX, real mouseY)
+    signal itemContextMenuRequested(var item, real globalX, real globalY)
+    signal backgroundContextMenuRequested(real globalX, real globalY)
     signal filesDropped(var urls, url destination, real mouseX, real mouseY)
 
     function selectAll() {
@@ -98,7 +99,8 @@ Item {
 
         onPressed: (mouse) => {
             if (mouse.button === Qt.RightButton) {
-                root.backgroundContextMenuRequested(mouse.x, mouse.y);
+                var gp = bgMouseArea.mapToGlobal(mouse.x, mouse.y);
+                root.backgroundContextMenuRequested(gp.x, gp.y);
             } else {
                 startX = mouse.x;
                 startY = mouse.y;
@@ -160,8 +162,8 @@ Item {
         anchors.fill: parent
         anchors.margins: 20
         clip: true
-        cellWidth: 120
-        cellHeight: 126
+        cellWidth: Math.max(90, root.iconSize + 56)
+        cellHeight: Math.max(96, root.iconSize + 62)
         model: root.model
         focus: true
 
@@ -190,7 +192,7 @@ Item {
                 anchors.centerIn: parent
                 width: gridView.cellWidth - 12
                 height: gridView.cellHeight - 10
-                iconSize: 64
+                iconSize: root.iconSize
                 title: model.name || ""
                 iconName: model.iconName || "inode-directory"
                 badgeText: model.isDirectory ? "" : (model.sizeString || "")
@@ -223,8 +225,8 @@ Item {
                             if (!delegateRoot.isItemSelected) {
                                 root.toggleSelect(it, false);
                             }
-                            var pos = mapToItem(root, mouse.x, mouse.y);
-                            root.itemContextMenuRequested(it, pos.x, pos.y);
+                            var gp = dragArea.mapToGlobal(mouse.x, mouse.y);
+                            root.itemContextMenuRequested(it, gp.x, gp.y);
                         } else {
                             var isMulti = (mouse.modifiers & Qt.ControlModifier) || (mouse.modifiers & Qt.ShiftModifier);
                             root.toggleSelect(it, isMulti);

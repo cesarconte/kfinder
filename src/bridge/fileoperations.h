@@ -36,9 +36,21 @@ public:
     Q_INVOKABLE void compressItems(const QList<QUrl> &sources, const QString &destinationArchive = QString());
     Q_INVOKABLE void extractArchive(const QUrl &archiveUrl, const QUrl &destinationDir = QUrl());
 
+    // Dolphin & macOS Parity Operations
+    Q_INVOKABLE void showContextMenu(const QList<QUrl> &urls, int globalX, int globalY, const QUrl &currentFolderUrl);
+    Q_INVOKABLE QVariantMap getStorageInfo(const QUrl &url) const;
+    Q_INVOKABLE QVariantMap getMetadata(const QUrl &url) const;
+    Q_INVOKABLE void setRating(const QUrl &url, int rating);
+    Q_INVOKABLE void setComment(const QUrl &url, const QString &comment);
+    Q_INVOKABLE void setTags(const QUrl &url, const QStringList &tags);
+
 Q_SIGNALS:
     void operationFinished(const QString &message);
     void operationFailed(const QString &error);
+    void newTabRequested(const QUrl &url);
+    void newWindowRequested(const QUrl &url);
+    void splitViewRequested(const QUrl &url);
+    void renameRequested(const QUrl &url);
 };
 
 } // namespace KFinder

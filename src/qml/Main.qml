@@ -23,9 +23,26 @@ CachyWindow {
 
     readonly property bool isSearching: fileModel.isSearching
     property bool showTerminalPanel: false
+    property bool showInformationPanel: false
+    property bool isSplitView: false
+    property int activePane: 0
+    property int gridIconSize: 64
     property var selectedItems: []
     property var selectedUrls: []
     property var activeItem: selectedItems.length > 0 ? selectedItems[0] : null
+
+    function toggleSplitView() {
+        root.isSplitView = !root.isSplitView;
+        if (root.isSplitView && (!fileModelSplit.currentUrl || fileModelSplit.currentUrl.toString().length === 0)) {
+            fileModelSplit.setUrl(fileModel.currentUrl);
+        }
+    }
+
+    function openSplitView(url) {
+        root.isSplitView = true;
+        fileModelSplit.setUrl(url);
+        root.activePane = 1;
+    }
 
     // Tabs state (macOS Golden Gate Finder Tabs)
     property var tabsList: [
@@ -142,6 +159,21 @@ CachyWindow {
     Shortcut {
         sequence: "F4"
         onActivated: root.showTerminalPanel = !root.showTerminalPanel
+    }
+
+    Shortcut {
+        sequence: "F11"
+        onActivated: root.showInformationPanel = !root.showInformationPanel
+    }
+
+    Shortcut {
+        sequence: "Alt+Ctrl+P"
+        onActivated: root.showInformationPanel = !root.showInformationPanel
+    }
+
+    Shortcut {
+        sequence: "F3"
+        onActivated: root.toggleSplitView()
     }
 
     Shortcut {
@@ -350,6 +382,11 @@ CachyWindow {
         }
     }
 
+    FileListModel {
+        id: fileModelSplit
+        showHiddenFiles: settingsManager.showHiddenFiles
+    }
+
     Connections {
         target: fileModel
         function onCurrentUrlChanged() {
@@ -376,6 +413,25 @@ CachyWindow {
 
     FileOperations {
         id: fileOps
+    }
+
+    Connections {
+        target: fileOps
+        function onNewTabRequested(url) {
+            root.addNewTab(url)
+        }
+        function onNewWindowRequested(url) {
+            fileOps.newWindow(url)
+        }
+        function onSplitViewRequested(url) {
+            root.openSplitView(url)
+        }
+        function onRenameRequested(url) {
+            var name = (root.activeItem && root.activeItem.name) ? root.activeItem.name : ""
+            renameDialog.targetUrl = url
+            renameDialog.currentName = name
+            renameDialog.open()
+        }
     }
 
     FileContextMenu {
@@ -886,6 +942,18 @@ CachyWindow {
         CachyToolbarGroup {
             anchors.verticalCenter: parent.verticalCenter
             CachyToolbarButton {
+                iconName: "eye"
+                tooltipText: CachyI18n.i18n("Panel de información (F11)")
+                pillStyle: false
+                onClicked: root.showInformationPanel = !root.showInformationPanel
+            }
+            CachyToolbarButton {
+                iconName: "view-split-left-right"
+                tooltipText: CachyI18n.i18n("Vista dividida (F3)")
+                pillStyle: false
+                onClicked: root.toggleSplitView()
+            }
+            CachyToolbarButton {
                 iconName: "share"
                 tooltipText: CachyI18n.i18n("Compartir")
                 pillStyle: false
@@ -909,9 +977,8 @@ CachyWindow {
                 tooltipText: CachyI18n.i18n("Acciones")
                 pillStyle: false
                 onClicked: {
-                    if (contextMenu.targetItem) {
-                        contextMenu.popup(mapToItem(root.contentItem, 0, 0))
-                    }
+                    var urls = root.selectedUrls.length > 0 ? root.selectedUrls : (root.activeItem && root.activeItem.url ? [root.activeItem.url] : [])
+                    fileOps.showContextMenu(urls, 100, 100, fileModel.currentUrl)
                 }
             }
         }
@@ -959,122 +1026,198 @@ CachyWindow {
                 onScopeChanged: (index) => fileModel.setSearchScope(index)
             }
 
-            // View containers
-            Item {
+            // View containers with Split View & Information Panel
+            RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                spacing: 0
 
-                // 1. Icon Grid View
-                FileGridView {
-                    id: fileGrid
-                    anchors.fill: parent
-                    model: fileModel
-                    currentUrl: fileModel.currentUrl
-                    visible: viewSwitcher.currentIndex === 0 && fileModel.count > 0
+                // Central Views Container (Supports Split View F3)
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: 0
 
-                    onItemClicked: (item) => {
-                        root.activeItem = item
-                        root.selectedItems = fileGrid.selectedItems
-                        root.selectedUrls = fileGrid.selectedUrls
-                    }
-                    onItemDoubleClicked: (item) => {
-                        if (item.isDirectory) {
-                            root.navigateToUrl(item.url)
-                        } else {
-                            fileOps.openUrl(item.url)
+                    // Primary Pane
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        FileGridView {
+                            id: fileGrid
+                            anchors.fill: parent
+                            model: fileModel
+                            iconSize: root.gridIconSize
+                            currentUrl: fileModel.currentUrl
+                            visible: viewSwitcher.currentIndex === 0 && fileModel.count > 0
+
+                            onItemClicked: (item) => {
+                                root.activeItem = item
+                                root.selectedItems = fileGrid.selectedItems
+                                root.selectedUrls = fileGrid.selectedUrls
+                            }
+                            onItemDoubleClicked: (item) => {
+                                if (item.isDirectory) root.navigateToUrl(item.url)
+                                else fileOps.openUrl(item.url)
+                            }
+                            onItemContextMenuRequested: (item, gx, gy) => {
+                                root.activeItem = item
+                                var urls = root.selectedUrls.length > 0 ? root.selectedUrls : (item && item.url ? [item.url] : [])
+                                fileOps.showContextMenu(urls, gx, gy, fileModel.currentUrl)
+                            }
+                            onBackgroundContextMenuRequested: (gx, gy) => {
+                                fileOps.showContextMenu([], gx, gy, fileModel.currentUrl)
+                            }
+                            onFilesDropped: (urls, destination, x, y) => {
+                                handleFilesDropped(urls, destination, x, y)
+                            }
+                        }
+
+                        FileListView {
+                            id: fileList
+                            anchors.fill: parent
+                            model: fileModel
+                            currentUrl: fileModel.currentUrl
+                            visible: viewSwitcher.currentIndex === 1 && fileModel.count > 0
+
+                            onItemClicked: (item) => {
+                                root.activeItem = item
+                                root.selectedItems = fileList.selectedItems
+                                root.selectedUrls = fileList.selectedUrls
+                            }
+                            onItemDoubleClicked: (item) => {
+                                if (item.isDirectory) root.navigateToUrl(item.url)
+                                else fileOps.openUrl(item.url)
+                            }
+                            onItemContextMenuRequested: (item, gx, gy) => {
+                                root.activeItem = item
+                                var urls = root.selectedUrls.length > 0 ? root.selectedUrls : (item && item.url ? [item.url] : [])
+                                fileOps.showContextMenu(urls, gx, gy, fileModel.currentUrl)
+                            }
+                            onBackgroundContextMenuRequested: (gx, gy) => {
+                                fileOps.showContextMenu([], gx, gy, fileModel.currentUrl)
+                            }
+                            onFilesDropped: (urls, destination, x, y) => {
+                                handleFilesDropped(urls, destination, x, y)
+                            }
+                        }
+
+                        FileColumnView {
+                            anchors.fill: parent
+                            rootUrl: fileModel.currentUrl ? fileModel.currentUrl.toString() : ""
+                            visible: viewSwitcher.currentIndex === 2 && fileModel.count > 0
+
+                            onItemDoubleClicked: (item) => {
+                                if (item.isDirectory) root.navigateToUrl(item.url)
+                                else fileOps.openUrl(item.url)
+                            }
+
+                            onItemContextMenuRequested: (item, x, y) => {
+                                root.activeItem = item
+                                var urls = root.selectedUrls.length > 0 ? root.selectedUrls : (item && item.url ? [item.url] : [])
+                                var gp = mapToGlobal(x, y)
+                                fileOps.showContextMenu(urls, gp.x, gp.y, fileModel.currentUrl)
+                            }
+                        }
+
+                        FileGalleryView {
+                            anchors.fill: parent
+                            model: fileModel
+                            visible: viewSwitcher.currentIndex === 3 && fileModel.count > 0
+
+                            onItemDoubleClicked: (item) => {
+                                if (item.isDirectory) root.navigateToUrl(item.url)
+                                else fileOps.openUrl(item.url)
+                            }
+
+                            onQuickLookRequested: (item) => {
+                                if (item && item.url) fileOps.quickLook(item.url)
+                            }
+                        }
+
+                        CachyBusyIndicator {
+                            anchors.centerIn: parent
+                            running: fileModel.loading
+                            visible: running
+                        }
+
+                        CachyPlaceholderMessage {
+                            anchors.centerIn: parent
+                            visible: !fileModel.loading && fileModel.count === 0
+                            iconName: "folder"
+                            text: CachyI18n.i18n("Carpeta vacía")
                         }
                     }
-                    onItemContextMenuRequested: (item, x, y) => {
-                        root.activeItem = item
-                        contextMenu.targetItem = item
-                        contextMenu.popup(mapToItem(root.contentItem, x, y))
-                    }
-                    onFilesDropped: (urls, destination, x, y) => {
-                        handleFilesDropped(urls, destination, x, y)
-                    }
-                }
 
-                // 2. Details List View
-                FileListView {
-                    id: fileList
-                    anchors.fill: parent
-                    model: fileModel
-                    currentUrl: fileModel.currentUrl
-                    visible: viewSwitcher.currentIndex === 1 && fileModel.count > 0
-
-                    onItemClicked: (item) => {
-                        root.activeItem = item
-                        root.selectedItems = fileList.selectedItems
-                        root.selectedUrls = fileList.selectedUrls
+                    // Split View Divider
+                    Rectangle {
+                        Layout.fillHeight: true
+                        width: 1
+                        visible: root.isSplitView
+                        color: CachyPalette.divider
                     }
-                    onItemDoubleClicked: (item) => {
-                        if (item.isDirectory) {
-                            root.navigateToUrl(item.url)
-                        } else {
-                            fileOps.openUrl(item.url)
+
+                    // Secondary Pane (Split View F3)
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: root.isSplitView
+
+                        FileGridView {
+                            id: fileGridSplit
+                            anchors.fill: parent
+                            model: fileModelSplit
+                            iconSize: root.gridIconSize
+                            currentUrl: fileModelSplit.currentUrl
+                            visible: viewSwitcher.currentIndex === 0 && fileModelSplit.count > 0
+
+                            onItemDoubleClicked: (item) => {
+                                if (item.isDirectory) fileModelSplit.setUrl(item.url)
+                                else fileOps.openUrl(item.url)
+                            }
+                            onItemContextMenuRequested: (item, gx, gy) => {
+                                fileOps.showContextMenu([item.url], gx, gy, fileModelSplit.currentUrl)
+                            }
+                            onBackgroundContextMenuRequested: (gx, gy) => {
+                                fileOps.showContextMenu([], gx, gy, fileModelSplit.currentUrl)
+                            }
+                        }
+
+                        FileListView {
+                            id: fileListSplit
+                            anchors.fill: parent
+                            model: fileModelSplit
+                            currentUrl: fileModelSplit.currentUrl
+                            visible: viewSwitcher.currentIndex === 1 && fileModelSplit.count > 0
+
+                            onItemDoubleClicked: (item) => {
+                                if (item.isDirectory) fileModelSplit.setUrl(item.url)
+                                else fileOps.openUrl(item.url)
+                            }
+                            onItemContextMenuRequested: (item, gx, gy) => {
+                                fileOps.showContextMenu([item.url], gx, gy, fileModelSplit.currentUrl)
+                            }
                         }
                     }
-                    onItemContextMenuRequested: (item, x, y) => {
-                        root.activeItem = item
-                        contextMenu.targetItem = item
-                        contextMenu.popup(mapToItem(root.contentItem, x, y))
-                    }
-                    onFilesDropped: (urls, destination, x, y) => {
-                        handleFilesDropped(urls, destination, x, y)
-                    }
                 }
 
-                // 3. Columns View (Miller Columns)
-                FileColumnView {
-                    anchors.fill: parent
-                    rootUrl: fileModel.currentUrl ? fileModel.currentUrl.toString() : ""
-                    visible: viewSwitcher.currentIndex === 2 && fileModel.count > 0
-
-                    onItemDoubleClicked: (item) => {
-                        if (item.isDirectory) {
-                            root.navigateToUrl(item.url)
-                        } else {
-                            fileOps.openUrl(item.url)
-                        }
-                    }
-
-                    onItemContextMenuRequested: (item, x, y) => {
-                        root.activeItem = item
-                        contextMenu.targetItem = item
-                        contextMenu.popup(mapToItem(root.contentItem, x, y))
-                    }
-                }
-
-                // 4. Gallery View
-                FileGalleryView {
-                    anchors.fill: parent
-                    model: fileModel
-                    visible: viewSwitcher.currentIndex === 3 && fileModel.count > 0
-
-                    onItemDoubleClicked: (item) => {
-                        if (item.isDirectory) {
-                            root.navigateToUrl(item.url)
-                        } else {
-                            fileOps.openUrl(item.url)
-                        }
-                    }
-
-                    onQuickLookRequested: (item) => {
-                        if (item && item.url) fileOps.quickLook(item.url)
-                    }
-                }
-
-                CachyBusyIndicator {
-                    anchors.centerIn: parent
-                    running: fileModel.loading
-                    visible: running
-                }
-
-                CachyPlaceholderMessage {
-                    anchors.centerIn: parent
-                    visible: !fileModel.loading && fileModel.count === 0
-                    iconName: "folder"
-                    text: CachyI18n.i18n("Carpeta vacía")
+                // Right Side: Information Panel / Inspector (F11 / macOS Preview Pane)
+                InformationPanel {
+                    id: infoPanel
+                    Layout.fillHeight: true
+                    visible: root.showInformationPanel
+                    targetItem: root.activeItem ? root.activeItem : ({
+                        url: fileModel.currentUrl,
+                        name: fileModel.currentUrl ? (fileModel.currentUrl.toString().split("/").filter(Boolean).pop() || "/") : "/",
+                        isDirectory: true,
+                        iconName: "inode-directory"
+                    })
+                    fileOps: fileOps
+                    onCloseRequested: root.showInformationPanel = false
+                    onQuickLookRequested: (item) => fileOps.quickLook(item.url)
+                    onOpenWithRequested: (item) => fileOps.openWith(item.url)
+                    onPropertiesRequested: (item) => fileOps.showProperties(item.url)
+                    onTagChanged: (color) => fileModel.refresh()
                 }
             }
 
@@ -1088,6 +1231,18 @@ CachyWindow {
                                   : ""
                 onCloseRequested: root.showTerminalPanel = false
                 onOpenExternalRequested: fileOps.openTerminal(fileModel.currentUrl)
+            }
+
+            // Bottom Status Bar (Storage & Zoom Slider)
+            StatusBar {
+                id: bottomStatusBar
+                Layout.fillWidth: true
+                totalCount: fileModel.count
+                selectedCount: root.selectedUrls.length
+                storageInfo: fileOps.getStorageInfo(fileModel.currentUrl)
+                onZoomChanged: (val) => {
+                    root.gridIconSize = val
+                }
             }
 
             // Bottom PathBar

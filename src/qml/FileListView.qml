@@ -13,8 +13,8 @@ Item {
 
     signal itemClicked(var item)
     signal itemDoubleClicked(var item)
-    signal itemContextMenuRequested(var item, real mouseX, real mouseY)
-    signal backgroundContextMenuRequested(real mouseX, real mouseY)
+    signal itemContextMenuRequested(var item, real globalX, real globalY)
+    signal backgroundContextMenuRequested(real globalX, real globalY)
     signal filesDropped(var urls, url destination, real mouseX, real mouseY)
 
     function selectAll() {
@@ -89,7 +89,8 @@ Item {
                 root.selectedUrls = [data.url.toString()];
                 root.selectedItems = [data];
             }
-            root.itemContextMenuRequested(data, mouseX, mouseY);
+            var gp = tableView.mapToGlobal(mouseX, mouseY);
+            root.itemContextMenuRequested(data, gp.x, gp.y);
         }
 
         onSortRequested: (role, order) => {

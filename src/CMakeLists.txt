@@ -62,6 +62,8 @@ qt_add_qml_module(kfinder
         qml/EmptyTrashAlert.qml
         qml/TerminalPanel.qml
         qml/GetInfoDialog.qml
+        qml/InformationPanel.qml
+        qml/StatusBar.qml
 )
 
 install(TARGETS kfinder ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
