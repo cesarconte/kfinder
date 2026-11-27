@@ -64,6 +64,27 @@ CachyDialog {
                         if (dialog.settings) dialog.settings.showHiddenFiles = checked
                     }
                 }
+
+                CachyFormDelegateSeparator {}
+
+                CachyFormButtonDelegate {
+                    text: (dialog.settings && dialog.settings.isDefaultFileManager)
+                          ? CachyI18n.i18n("Finder es el gestor predeterminado")
+                          : CachyI18n.i18n("Establecer Finder como predeterminado")
+                    description: (dialog.settings && dialog.settings.isDefaultFileManager)
+                          ? CachyI18n.i18n("kfinder gestiona todas las carpetas del sistema. Clic para restaurar Dolphin.")
+                          : CachyI18n.i18n("Configura kfinder para abrir carpetas desde cualquier app.")
+                    icon.name: (dialog.settings && dialog.settings.isDefaultFileManager) ? "check" : "external-link"
+                    onClicked: {
+                        if (dialog.settings) {
+                            if (dialog.settings.isDefaultFileManager) {
+                                dialog.settings.restoreDolphinDefault()
+                            } else {
+                                dialog.settings.setAsDefaultFileManager()
+                            }
+                        }
+                    }
+                }
             }
         }
 

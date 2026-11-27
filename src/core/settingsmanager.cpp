@@ -1,4 +1,5 @@
 #include "settingsmanager.h"
+#include <QProcess>
 
 namespace KFinder {
 
@@ -133,6 +134,26 @@ void SettingsManager::setShowTerminalPanel(bool show)
     m_showTerminalPanel = show;
     m_settings.setValue(QStringLiteral("General/ShowTerminalPanel"), m_showTerminalPanel);
     Q_EMIT showTerminalPanelChanged();
+}
+
+bool SettingsManager::isDefaultFileManager() const
+{
+    QProcess proc;
+    proc.start(QStringLiteral("xdg-mime"), {QStringLiteral("query"), QStringLiteral("default"), QStringLiteral("inode/directory")});
+    proc.waitForFinished(1000);
+    return proc.readAllStandardOutput().trimmed() == QByteArray("org.cesar.kfinder.desktop");
+}
+
+void SettingsManager::setAsDefaultFileManager()
+{
+    QProcess::execute(QStringLiteral("xdg-mime"), {QStringLiteral("default"), QStringLiteral("org.cesar.kfinder.desktop"), QStringLiteral("inode/directory")});
+    Q_EMIT isDefaultFileManagerChanged();
+}
+
+void SettingsManager::restoreDolphinDefault()
+{
+    QProcess::execute(QStringLiteral("xdg-mime"), {QStringLiteral("default"), QStringLiteral("org.kde.dolphin.desktop"), QStringLiteral("inode/directory")});
+    Q_EMIT isDefaultFileManagerChanged();
 }
 
 } // namespace KFinder

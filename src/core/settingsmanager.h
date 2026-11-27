@@ -15,6 +15,7 @@ class SettingsManager : public QObject
     Q_PROPERTY(int keyboardProfile READ keyboardProfile WRITE setKeyboardProfile NOTIFY keyboardProfileChanged) // 0: Finder, 1: Dolphin
     Q_PROPERTY(bool showHiddenFiles READ showHiddenFiles WRITE setShowHiddenFiles NOTIFY showHiddenFilesChanged)
     Q_PROPERTY(bool showTerminalPanel READ showTerminalPanel WRITE setShowTerminalPanel NOTIFY showTerminalPanelChanged)
+    Q_PROPERTY(bool isDefaultFileManager READ isDefaultFileManager NOTIFY isDefaultFileManagerChanged)
 
 public:
     explicit SettingsManager(QObject *parent = nullptr);
@@ -41,6 +42,10 @@ public:
     bool showTerminalPanel() const;
     void setShowTerminalPanel(bool show);
 
+    bool isDefaultFileManager() const;
+    Q_INVOKABLE void setAsDefaultFileManager();
+    Q_INVOKABLE void restoreDolphinDefault();
+
     Q_INVOKABLE void save();
     Q_INVOKABLE void restoreDefaults();
 
@@ -52,6 +57,7 @@ Q_SIGNALS:
     void keyboardProfileChanged();
     void showHiddenFilesChanged();
     void showTerminalPanelChanged();
+    void isDefaultFileManagerChanged();
 
 private:
     void load();
