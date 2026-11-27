@@ -4,6 +4,8 @@ qt_add_executable(kfinder
     bridge/filelistmodel.cpp
     bridge/placesmodel.h
     bridge/placesmodel.cpp
+    bridge/fileoperations.h
+    bridge/fileoperations.cpp
     core/fileitementry.h
 )
 
@@ -40,6 +42,9 @@ qt_add_qml_module(kfinder
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+        qml/FileListView.qml
+        qml/FileColumnView.qml
+        qml/FileContextMenu.qml
 )
 
 install(TARGETS kfinder ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})

@@ -1,3 +1,4 @@
+#include "bridge/fileoperations.h"
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -29,6 +30,7 @@ int main(int argc, char *argv[])
 
     qmlRegisterType<KFinder::FileListModel>("org.cesar.kfinder", 1, 0, "FileListModel");
     qmlRegisterType<KFinder::PlacesModel>("org.cesar.kfinder", 1, 0, "PlacesModel");
+    qmlRegisterType<KFinder::FileOperations>("org.cesar.kfinder", 1, 0, "FileOperations");
 
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/org/cesar/kfinder/qml/Main.qml"));

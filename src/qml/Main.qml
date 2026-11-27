@@ -7,7 +7,7 @@ import org.cesar.kfinder
 CachyWindow {
     id: root
 
-    title: fileModel.currentUrl ? fileModel.currentUrl.toString().split("/").pop() || CachyI18n.i18n("Finder") : CachyI18n.i18n("Finder")
+    title: fileModel.currentUrl ? (fileModel.currentUrl.toString().split("/").filter(Boolean).pop() || CachyI18n.i18n("Finder")) : CachyI18n.i18n("Finder")
     width: CachyTheme.windowWidthSettings
     height: CachyTheme.windowHeightSettings
     minimumWidth: 620
@@ -22,16 +22,45 @@ CachyWindow {
 
     FileListModel {
         id: fileModel
-        currentUrl: "file://" + CachyTheme.distroName // fallback or initial directory
         Component.onCompleted: {
-            currentUrl = "file://" + Qt.application.arguments[0] || "file:///home/cesar"
-            // Default to user home
             fileModel.setUrl("file:///home/cesar")
         }
     }
 
     PlacesModel {
         id: placesModel
+    }
+
+    FileOperations {
+        id: fileOps
+    }
+
+    FileContextMenu {
+        id: contextMenu
+        onOpenRequested: (item) => {
+            if (item && item.url) {
+                if (item.isDirectory) {
+                    fileModel.setUrl(item.url)
+                } else {
+                    fileOps.openUrl(item.url)
+                }
+            }
+        }
+        onQuickLookRequested: (item) => {
+            if (item && item.url) fileOps.quickLook(item.url)
+        }
+        onGetInfoRequested: (item) => {
+            if (item && item.url) fileOps.showProperties(item.url)
+        }
+        onMoveToTrashRequested: (item) => {
+            if (item && item.url) fileOps.moveToTrash([item.url])
+        }
+        onCopyRequested: (item) => {
+            if (item && item.url) fileOps.copy([item.url])
+        }
+        onDuplicateRequested: (item) => {
+            if (item && item.url) fileOps.duplicate(item.url)
+        }
     }
 
     sidebar: ColumnLayout {
@@ -82,11 +111,11 @@ CachyWindow {
         spacing: CachyTheme.spacingSmall
 
         CachySegmentedControl {
+            id: viewSwitcher
             model: [
                 { icon: "grid", text: "" },
                 { icon: "list", text: "" },
-                { icon: "table", text: "" },
-                { icon: "eye", text: "" }
+                { icon: "table", text: "" }
             ]
             currentIndex: 0
             pillStyle: true
@@ -126,6 +155,7 @@ CachyWindow {
         anchors.fill: parent
         color: CachyPalette.contentBackground
 
+        // 1. Icon Grid View
         GridView {
             id: fileGrid
             anchors.fill: parent
@@ -134,7 +164,7 @@ CachyWindow {
             cellWidth: 110
             cellHeight: 120
             model: fileModel
-            visible: fileModel.count > 0
+            visible: viewSwitcher.currentIndex === 0 && fileModel.count > 0
 
             delegate: CachyGridItem {
                 width: fileGrid.cellWidth - 10
@@ -147,8 +177,59 @@ CachyWindow {
                 onDoubleClicked: {
                     if (model.isDirectory) {
                         fileModel.setUrl(model.url)
+                    } else {
+                        fileOps.openUrl(model.url)
                     }
                 }
+
+                onContextMenuRequested: (x, y) => {
+                    contextMenu.targetItem = {
+                        name: model.name,
+                        url: model.url,
+                        isDirectory: model.isDirectory
+                    }
+                    contextMenu.popup(mapToItem(root.contentItem, x, y))
+                }
+            }
+        }
+
+        // 2. Details List View
+        FileListView {
+            anchors.fill: parent
+            model: fileModel
+            visible: viewSwitcher.currentIndex === 1 && fileModel.count > 0
+
+            onItemDoubleClicked: (item) => {
+                if (item.isDirectory) {
+                    fileModel.setUrl(item.url)
+                } else {
+                    fileOps.openUrl(item.url)
+                }
+            }
+
+            onItemContextMenuRequested: (item, x, y) => {
+                contextMenu.targetItem = item
+                contextMenu.popup(mapToItem(root.contentItem, x, y))
+            }
+        }
+
+        // 3. Columns View (Miller Columns)
+        FileColumnView {
+            anchors.fill: parent
+            rootUrl: fileModel.currentUrl ? fileModel.currentUrl.toString() : ""
+            visible: viewSwitcher.currentIndex === 2 && fileModel.count > 0
+
+            onItemDoubleClicked: (item) => {
+                if (item.isDirectory) {
+                    fileModel.setUrl(item.url)
+                } else {
+                    fileOps.openUrl(item.url)
+                }
+            }
+
+            onItemContextMenuRequested: (item, x, y) => {
+                contextMenu.targetItem = item
+                contextMenu.popup(mapToItem(root.contentItem, x, y))
             }
         }
 
