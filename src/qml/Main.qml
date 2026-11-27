@@ -115,7 +115,8 @@ CachyWindow {
             model: [
                 { icon: "grid", text: "" },
                 { icon: "list", text: "" },
-                { icon: "table", text: "" }
+                { icon: "table", text: "" },
+                { icon: "eye", text: "" }
             ]
             currentIndex: 0
             pillStyle: true
@@ -150,100 +151,137 @@ CachyWindow {
         }
     }
 
-    // Main Content Area
+    // Main Content Area with integrated PathBar
     Rectangle {
         anchors.fill: parent
         color: CachyPalette.contentBackground
 
-        // 1. Icon Grid View
-        GridView {
-            id: fileGrid
+        ColumnLayout {
             anchors.fill: parent
-            anchors.margins: CachyTheme.spacingMedium
-            clip: true
-            cellWidth: 110
-            cellHeight: 120
-            model: fileModel
-            visible: viewSwitcher.currentIndex === 0 && fileModel.count > 0
+            spacing: 0
 
-            delegate: CachyGridItem {
-                width: fileGrid.cellWidth - 10
-                height: fileGrid.cellHeight - 10
-                title: model.name || ""
-                iconName: model.iconName || "unknown"
-                badgeText: model.isDirectory ? "" : (model.sizeString || "")
-                selected: false
+            // View containers
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
-                onDoubleClicked: {
-                    if (model.isDirectory) {
-                        fileModel.setUrl(model.url)
-                    } else {
-                        fileOps.openUrl(model.url)
+                // 1. Icon Grid View
+                GridView {
+                    id: fileGrid
+                    anchors.fill: parent
+                    anchors.margins: CachyTheme.spacingMedium
+                    clip: true
+                    cellWidth: 110
+                    cellHeight: 120
+                    model: fileModel
+                    visible: viewSwitcher.currentIndex === 0 && fileModel.count > 0
+
+                    delegate: CachyGridItem {
+                        width: fileGrid.cellWidth - 10
+                        height: fileGrid.cellHeight - 10
+                        title: model.name || ""
+                        iconName: model.iconName || "unknown"
+                        badgeText: model.isDirectory ? "" : (model.sizeString || "")
+                        selected: false
+
+                        onDoubleClicked: {
+                            if (model.isDirectory) {
+                                fileModel.setUrl(model.url)
+                            } else {
+                                fileOps.openUrl(model.url)
+                            }
+                        }
+
+                        onContextMenuRequested: (x, y) => {
+                            contextMenu.targetItem = {
+                                name: model.name,
+                                url: model.url,
+                                isDirectory: model.isDirectory
+                            }
+                            contextMenu.popup(mapToItem(root.contentItem, x, y))
+                        }
                     }
                 }
 
-                onContextMenuRequested: (x, y) => {
-                    contextMenu.targetItem = {
-                        name: model.name,
-                        url: model.url,
-                        isDirectory: model.isDirectory
+                // 2. Details List View
+                FileListView {
+                    anchors.fill: parent
+                    model: fileModel
+                    visible: viewSwitcher.currentIndex === 1 && fileModel.count > 0
+
+                    onItemDoubleClicked: (item) => {
+                        if (item.isDirectory) {
+                            fileModel.setUrl(item.url)
+                        } else {
+                            fileOps.openUrl(item.url)
+                        }
                     }
-                    contextMenu.popup(mapToItem(root.contentItem, x, y))
+
+                    onItemContextMenuRequested: (item, x, y) => {
+                        contextMenu.targetItem = item
+                        contextMenu.popup(mapToItem(root.contentItem, x, y))
+                    }
+                }
+
+                // 3. Columns View (Miller Columns)
+                FileColumnView {
+                    anchors.fill: parent
+                    rootUrl: fileModel.currentUrl ? fileModel.currentUrl.toString() : ""
+                    visible: viewSwitcher.currentIndex === 2 && fileModel.count > 0
+
+                    onItemDoubleClicked: (item) => {
+                        if (item.isDirectory) {
+                            fileModel.setUrl(item.url)
+                        } else {
+                            fileOps.openUrl(item.url)
+                        }
+                    }
+
+                    onItemContextMenuRequested: (item, x, y) => {
+                        contextMenu.targetItem = item
+                        contextMenu.popup(mapToItem(root.contentItem, x, y))
+                    }
+                }
+
+                // 4. Gallery View
+                FileGalleryView {
+                    anchors.fill: parent
+                    model: fileModel
+                    visible: viewSwitcher.currentIndex === 3 && fileModel.count > 0
+
+                    onItemDoubleClicked: (item) => {
+                        if (item.isDirectory) {
+                            fileModel.setUrl(item.url)
+                        } else {
+                            fileOps.openUrl(item.url)
+                        }
+                    }
+
+                    onQuickLookRequested: (item) => {
+                        if (item && item.url) fileOps.quickLook(item.url)
+                    }
+                }
+
+                CachyBusyIndicator {
+                    anchors.centerIn: parent
+                    running: fileModel.loading
+                    visible: running
+                }
+
+                CachyPlaceholderMessage {
+                    anchors.centerIn: parent
+                    visible: !fileModel.loading && fileModel.count === 0
+                    iconName: "folder"
+                    text: CachyI18n.i18n("Carpeta vacía")
                 }
             }
-        }
 
-        // 2. Details List View
-        FileListView {
-            anchors.fill: parent
-            model: fileModel
-            visible: viewSwitcher.currentIndex === 1 && fileModel.count > 0
-
-            onItemDoubleClicked: (item) => {
-                if (item.isDirectory) {
-                    fileModel.setUrl(item.url)
-                } else {
-                    fileOps.openUrl(item.url)
-                }
+            // Bottom PathBar
+            PathBar {
+                Layout.fillWidth: true
+                pathUrl: fileModel.currentUrl ? fileModel.currentUrl.toString() : ""
+                onSegmentClicked: (url) => fileModel.setUrl(url)
             }
-
-            onItemContextMenuRequested: (item, x, y) => {
-                contextMenu.targetItem = item
-                contextMenu.popup(mapToItem(root.contentItem, x, y))
-            }
-        }
-
-        // 3. Columns View (Miller Columns)
-        FileColumnView {
-            anchors.fill: parent
-            rootUrl: fileModel.currentUrl ? fileModel.currentUrl.toString() : ""
-            visible: viewSwitcher.currentIndex === 2 && fileModel.count > 0
-
-            onItemDoubleClicked: (item) => {
-                if (item.isDirectory) {
-                    fileModel.setUrl(item.url)
-                } else {
-                    fileOps.openUrl(item.url)
-                }
-            }
-
-            onItemContextMenuRequested: (item, x, y) => {
-                contextMenu.targetItem = item
-                contextMenu.popup(mapToItem(root.contentItem, x, y))
-            }
-        }
-
-        CachyBusyIndicator {
-            anchors.centerIn: parent
-            running: fileModel.loading
-            visible: running
-        }
-
-        CachyPlaceholderMessage {
-            anchors.centerIn: parent
-            visible: !fileModel.loading && fileModel.count === 0
-            iconName: "folder"
-            text: CachyI18n.i18n("Carpeta vacía")
         }
     }
 }

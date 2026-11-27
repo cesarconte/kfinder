@@ -44,7 +44,9 @@ qt_add_qml_module(kfinder
         qml/Main.qml
         qml/FileListView.qml
         qml/FileColumnView.qml
+        qml/FileGalleryView.qml
         qml/FileContextMenu.qml
+        qml/PathBar.qml
 )
 
 install(TARGETS kfinder ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
