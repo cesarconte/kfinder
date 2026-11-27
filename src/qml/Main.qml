@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Qt.labs.platform as Platform
 import CachyOS.UI
 import org.cesar.kfinder
 
@@ -19,6 +20,8 @@ CachyWindow {
     contentPadded: false
     sidebarCollapsible: true
     sidebarWidthExpanded: 200
+
+    property bool isSearching: false
 
     FileListModel {
         id: fileModel
@@ -60,6 +63,143 @@ CachyWindow {
         }
         onDuplicateRequested: (item) => {
             if (item && item.url) fileOps.duplicate(item.url)
+        }
+    }
+
+    GoToFolderDialog {
+        id: goToDialog
+        onFolderSelected: (path) => {
+            var finalUrl = path
+            if (path.startsWith("~")) {
+                finalUrl = "file:///home/cesar" + path.substring(1)
+            } else if (!path.startsWith("file://")) {
+                finalUrl = "file://" + path
+            }
+            fileModel.setUrl(finalUrl)
+        }
+    }
+
+    Platform.MenuBar {
+        id: globalMenuBar
+
+        Platform.Menu {
+            title: CachyI18n.i18n("Finder")
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Acerca de Finder")
+                onTriggered: {}
+            }
+            Platform.MenuSeparator {}
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Ajustes...")
+                shortcut: "Ctrl+,"
+                onTriggered: {}
+            }
+            Platform.MenuSeparator {}
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Vaciar papelera...")
+                shortcut: "Ctrl+Shift+Backspace"
+                onTriggered: {}
+            }
+        }
+
+        Platform.Menu {
+            title: CachyI18n.i18n("Archivo")
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Nueva ventana")
+                shortcut: "Ctrl+N"
+                onTriggered: {}
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Nueva carpeta")
+                shortcut: "Ctrl+Shift+N"
+                onTriggered: {}
+            }
+            Platform.MenuSeparator {}
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Cerrar ventana")
+                shortcut: "Ctrl+W"
+                onTriggered: root.close()
+            }
+        }
+
+        Platform.Menu {
+            title: CachyI18n.i18n("Edición")
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Deshacer")
+                shortcut: "Ctrl+Z"
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Rehacer")
+                shortcut: "Ctrl+Shift+Z"
+            }
+            Platform.MenuSeparator {}
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Copiar")
+                shortcut: "Ctrl+C"
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Pegar")
+                shortcut: "Ctrl+V"
+                onTriggered: fileOps.paste(fileModel.currentUrl)
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Seleccionar todo")
+                shortcut: "Ctrl+A"
+            }
+        }
+
+        Platform.Menu {
+            title: CachyI18n.i18n("Visualización")
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Como iconos")
+                shortcut: "Ctrl+1"
+                onTriggered: viewSwitcher.currentIndex = 0
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Como lista")
+                shortcut: "Ctrl+2"
+                onTriggered: viewSwitcher.currentIndex = 1
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Como columnas")
+                shortcut: "Ctrl+3"
+                onTriggered: viewSwitcher.currentIndex = 2
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Como galería")
+                shortcut: "Ctrl+4"
+                onTriggered: viewSwitcher.currentIndex = 3
+            }
+        }
+
+        Platform.Menu {
+            title: CachyI18n.i18n("Ir")
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Carpeta superior")
+                shortcut: "Ctrl+Up"
+                onTriggered: fileModel.goUp()
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Inicio")
+                shortcut: "Ctrl+Shift+H"
+                onTriggered: fileModel.setUrl("file:///home/cesar")
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Descargas")
+                shortcut: "Ctrl+Shift+L"
+                onTriggered: fileModel.setUrl("file:///home/cesar/Descargas")
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Documentos")
+                shortcut: "Ctrl+Shift+O"
+                onTriggered: fileModel.setUrl("file:///home/cesar/Documentos")
+            }
+            Platform.MenuSeparator {}
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Ir a la carpeta...")
+                shortcut: "Ctrl+Shift+G"
+                onTriggered: goToDialog.open()
+            }
         }
     }
 
@@ -145,13 +285,17 @@ CachyWindow {
         }
 
         CachySearchField {
+            id: searchField
             placeholderText: CachyI18n.i18n("Search")
             pillStyle: true
             Layout.preferredWidth: 160
+            onAccepted: {
+                root.isSearching = text.length > 0
+            }
         }
     }
 
-    // Main Content Area with integrated PathBar
+    // Main Content Area with ScopeBar and PathBar
     Rectangle {
         anchors.fill: parent
         color: CachyPalette.contentBackground
@@ -159,6 +303,13 @@ CachyWindow {
         ColumnLayout {
             anchors.fill: parent
             spacing: 0
+
+            // Scope Bar (visible when search is active)
+            ScopeBar {
+                Layout.fillWidth: true
+                visible: root.isSearching
+                currentFolderName: fileModel.currentUrl ? (fileModel.currentUrl.toString().split("/").filter(Boolean).pop() || "/") : "/"
+            }
 
             // View containers
             Item {
