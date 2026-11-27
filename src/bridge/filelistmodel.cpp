@@ -297,6 +297,9 @@ FileItemEntry FileListModel::createEntry(const KFileItem &item)
     entry.isSymLink = item.isLink();
     entry.mimeType = item.mimetype();
     entry.iconName = item.iconName();
+    if (entry.isDirectory && (entry.iconName.isEmpty() || entry.iconName == QLatin1String("folder"))) {
+        entry.iconName = QStringLiteral("inode-directory");
+    }
     entry.modifiedTime = item.time(KFileItem::ModificationTime);
     entry.createdTime = item.time(KFileItem::CreationTime);
 

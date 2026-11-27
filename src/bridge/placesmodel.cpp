@@ -33,8 +33,13 @@ QVariant PlacesModel::data(const QModelIndex &index, int role) const
         return m_places->data(srcIdx, Qt::DisplayRole);
     case UrlRole:
         return m_places->url(srcIdx).toString();
-    case IconNameRole:
-        return m_places->icon(srcIdx).name();
+    case IconNameRole: {
+        QString iconName = m_places->icon(srcIdx).name();
+        if (iconName == QLatin1String("folder")) {
+            return QStringLiteral("inode-directory");
+        }
+        return iconName;
+    }
     case GroupRole:
         return m_places->data(srcIdx, KFilePlacesModel::GroupRole);
     case IsGroupRole:

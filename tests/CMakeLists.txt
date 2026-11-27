@@ -6,7 +6,10 @@ add_executable(test_kfinder_sanity
 
 target_link_libraries(test_kfinder_sanity PRIVATE
     Qt6::Core
+    Qt6::Gui
     Qt6::Test
+    KF6::IconThemes
+    CachyOSUI::cachyosui
 )
 
 add_test(NAME test_kfinder_sanity COMMAND test_kfinder_sanity)

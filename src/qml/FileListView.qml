@@ -18,7 +18,7 @@ Item {
         rowHeight: 32
 
         columns: [
-            { role: "name", title: CachyI18n.i18n("Nombre"), width: 340 },
+            { role: "name", iconRole: "iconName", type: "icon", title: CachyI18n.i18n("Nombre"), width: 340 },
             { role: "sizeString", title: CachyI18n.i18n("Tamaño"), width: 110 },
             { role: "mimeType", title: CachyI18n.i18n("Clase"), width: 180 }
         ]
