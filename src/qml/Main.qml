@@ -27,6 +27,93 @@ CachyWindow {
     property var selectedUrls: []
     property var activeItem: selectedItems.length > 0 ? selectedItems[0] : null
 
+    // Tabs state (macOS Golden Gate Finder Tabs)
+    property var tabsList: [
+        {
+            url: typeof initialUrl !== "undefined" && initialUrl ? initialUrl : "file:///home/cesar",
+            title: CachyI18n.i18n("Inicio"),
+            iconName: "inode-directory",
+            closable: true
+        }
+    ]
+    property int currentTabIndex: 0
+
+    function addNewTab(url) {
+        var u = url ? url.toString() : "file:///home/cesar";
+        var segs = u.split("/").filter(Boolean);
+        var folderName = segs.length > 0 ? decodeURIComponent(segs[segs.length - 1]) : "/";
+        if (u === "file:///home/cesar") folderName = CachyI18n.i18n("Inicio");
+        var list = [...root.tabsList];
+        list.push({
+            url: u,
+            title: folderName,
+            iconName: "inode-directory",
+            closable: true
+        });
+        root.tabsList = list;
+        root.currentTabIndex = list.length - 1;
+        fileModel.setUrl(u);
+    }
+
+    function closeTab(index) {
+        if (root.tabsList.length <= 1) {
+            root.close();
+            return;
+        }
+        var list = [...root.tabsList];
+        list.splice(index, 1);
+        root.tabsList = list;
+        if (root.currentTabIndex >= list.length) {
+            root.currentTabIndex = list.length - 1;
+        }
+        fileModel.setUrl(root.tabsList[root.currentTabIndex].url);
+    }
+
+    function switchTab(index) {
+        if (index >= 0 && index < root.tabsList.length) {
+            root.currentTabIndex = index;
+            fileModel.setUrl(root.tabsList[index].url);
+        }
+    }
+
+    // History state (Back / Forward)
+    property var historyBack: []
+    property var historyForward: []
+    property bool isHistoryNavigation: false
+
+    function navigateToUrl(urlStr) {
+        if (!urlStr || urlStr.length === 0) return;
+        var current = fileModel.currentUrl ? fileModel.currentUrl.toString() : "";
+        if (urlStr !== current) {
+            if (!isHistoryNavigation && current.length > 0) {
+                historyBack.push(current);
+                historyForward = [];
+            }
+            fileModel.setUrl(urlStr);
+        }
+        root.requestActivate();
+    }
+
+    function goBack() {
+        if (historyBack.length === 0) return;
+        var current = fileModel.currentUrl ? fileModel.currentUrl.toString() : "";
+        isHistoryNavigation = true;
+        historyForward.push(current);
+        var prev = historyBack.pop();
+        fileModel.setUrl(prev);
+        isHistoryNavigation = false;
+    }
+
+    function goForward() {
+        if (historyForward.length === 0) return;
+        var current = fileModel.currentUrl ? fileModel.currentUrl.toString() : "";
+        isHistoryNavigation = true;
+        historyBack.push(current);
+        var next = historyForward.pop();
+        fileModel.setUrl(next);
+        isHistoryNavigation = false;
+    }
+
     function getUrls(items) {
         var list = [];
         if (items && items.length > 0) {
@@ -186,6 +273,51 @@ CachyWindow {
     }
 
     Shortcut {
+        sequence: "Ctrl+T"
+        onActivated: root.addNewTab(fileModel.currentUrl)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+W"
+        onActivated: root.closeTab(root.currentTabIndex)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+W"
+        onActivated: root.close()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Tab"
+        onActivated: root.switchTab((root.currentTabIndex + 1) % root.tabsList.length)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+Tab"
+        onActivated: root.switchTab((root.currentTabIndex - 1 + root.tabsList.length) % root.tabsList.length)
+    }
+
+    Shortcut {
+        sequence: "Alt+Left"
+        onActivated: root.goBack()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+["
+        onActivated: root.goBack()
+    }
+
+    Shortcut {
+        sequence: "Alt+Right"
+        onActivated: root.goForward()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+]"
+        onActivated: root.goForward()
+    }
+
+    Shortcut {
         sequence: "Ctrl+A"
         onActivated: selectAllCurrentView()
     }
@@ -218,10 +350,23 @@ CachyWindow {
         }
     }
 
-    function navigateToUrl(urlStr) {
-        if (urlStr && urlStr.length > 0) {
-            fileModel.setUrl(urlStr)
-            root.requestActivate()
+    Connections {
+        target: fileModel
+        function onCurrentUrlChanged() {
+            if (root.tabsList.length > 0 && root.currentTabIndex >= 0 && root.currentTabIndex < root.tabsList.length) {
+                var u = fileModel.currentUrl ? fileModel.currentUrl.toString() : "";
+                var segs = u.split("/").filter(Boolean);
+                var folderName = segs.length > 0 ? decodeURIComponent(segs[segs.length - 1]) : "/";
+                if (u === "file:///home/cesar") folderName = CachyI18n.i18n("Inicio");
+                var list = [...root.tabsList];
+                list[root.currentTabIndex] = {
+                    url: u,
+                    title: folderName,
+                    iconName: "inode-directory",
+                    closable: true
+                };
+                root.tabsList = list;
+            }
         }
     }
 
@@ -369,6 +514,11 @@ CachyWindow {
         Platform.Menu {
             title: CachyI18n.i18n("Archivo")
             Platform.MenuItem {
+                text: CachyI18n.i18n("Nueva pestaña")
+                shortcut: "Ctrl+T"
+                onTriggered: root.addNewTab(fileModel.currentUrl)
+            }
+            Platform.MenuItem {
                 text: CachyI18n.i18n("Nueva ventana")
                 shortcut: "Ctrl+N"
                 onTriggered: fileOps.newWindow(fileModel.currentUrl)
@@ -403,8 +553,13 @@ CachyWindow {
             }
             Platform.MenuSeparator {}
             Platform.MenuItem {
-                text: CachyI18n.i18n("Cerrar ventana")
+                text: CachyI18n.i18n("Cerrar pestaña")
                 shortcut: "Ctrl+W"
+                onTriggered: root.closeTab(root.currentTabIndex)
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Cerrar ventana")
+                shortcut: "Ctrl+Shift+W"
                 onTriggered: root.close()
             }
         }
@@ -489,24 +644,37 @@ CachyWindow {
         Platform.Menu {
             title: CachyI18n.i18n("Ir")
             Platform.MenuItem {
+                text: CachyI18n.i18n("Atrás")
+                shortcut: "Alt+Left"
+                enabled: root.historyBack.length > 0
+                onTriggered: root.goBack()
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Adelante")
+                shortcut: "Alt+Right"
+                enabled: root.historyForward.length > 0
+                onTriggered: root.goForward()
+            }
+            Platform.MenuItem {
                 text: CachyI18n.i18n("Carpeta superior")
-                shortcut: "Ctrl+Up"
+                shortcut: "Alt+Up"
                 onTriggered: fileModel.goUp()
             }
+            Platform.MenuSeparator {}
             Platform.MenuItem {
                 text: CachyI18n.i18n("Inicio")
                 shortcut: "Ctrl+Shift+H"
-                onTriggered: fileModel.setUrl("file:///home/cesar")
+                onTriggered: root.navigateToUrl("file:///home/cesar")
             }
             Platform.MenuItem {
                 text: CachyI18n.i18n("Descargas")
                 shortcut: "Ctrl+Shift+L"
-                onTriggered: fileModel.setUrl("file:///home/cesar/Descargas")
+                onTriggered: root.navigateToUrl("file:///home/cesar/Descargas")
             }
             Platform.MenuItem {
                 text: CachyI18n.i18n("Documentos")
                 shortcut: "Ctrl+Shift+O"
-                onTriggered: fileModel.setUrl("file:///home/cesar/Documentos")
+                onTriggered: root.navigateToUrl("file:///home/cesar/Documentos")
             }
             Platform.MenuSeparator {}
             Platform.MenuItem {
@@ -565,7 +733,7 @@ CachyWindow {
                     accentSelected: false
                     onClicked: {
                         if (model.url && model.url.length > 0) {
-                            fileModel.setUrl(model.url)
+                            root.navigateToUrl(model.url)
                         }
                     }
                 }
@@ -617,9 +785,10 @@ CachyWindow {
         spacing: CachyTheme.spacingSmall
 
         CachyNavigationButtons {
-            canGoBack: true
-            canGoForward: false
-            onBackClicked: fileModel.goUp()
+            canGoBack: root.historyBack.length > 0
+            canGoForward: root.historyForward.length > 0
+            onBackClicked: root.goBack()
+            onForwardClicked: root.goForward()
         }
 
         CachyHeading {
@@ -688,6 +857,19 @@ CachyWindow {
             anchors.fill: parent
             spacing: 0
 
+            // Tabs Bar (macOS Golden Gate Finder Tabs)
+            CachyTabBar {
+                id: finderTabBar
+                Layout.fillWidth: true
+                visible: root.tabsList.length > 1
+                tabs: root.tabsList
+                currentIndex: root.currentTabIndex
+                showAddButton: true
+                onTabClicked: (index) => root.switchTab(index)
+                onTabCloseRequested: (index) => root.closeTab(index)
+                onAddTabRequested: root.addNewTab(fileModel.currentUrl)
+            }
+
             // Scope Bar (visible when search is active)
             ScopeBar {
                 Layout.fillWidth: true
@@ -717,7 +899,7 @@ CachyWindow {
                     }
                     onItemDoubleClicked: (item) => {
                         if (item.isDirectory) {
-                            fileModel.setUrl(item.url)
+                            root.navigateToUrl(item.url)
                         } else {
                             fileOps.openUrl(item.url)
                         }
@@ -747,7 +929,7 @@ CachyWindow {
                     }
                     onItemDoubleClicked: (item) => {
                         if (item.isDirectory) {
-                            fileModel.setUrl(item.url)
+                            root.navigateToUrl(item.url)
                         } else {
                             fileOps.openUrl(item.url)
                         }
@@ -770,7 +952,7 @@ CachyWindow {
 
                     onItemDoubleClicked: (item) => {
                         if (item.isDirectory) {
-                            fileModel.setUrl(item.url)
+                            root.navigateToUrl(item.url)
                         } else {
                             fileOps.openUrl(item.url)
                         }
@@ -791,7 +973,7 @@ CachyWindow {
 
                     onItemDoubleClicked: (item) => {
                         if (item.isDirectory) {
-                            fileModel.setUrl(item.url)
+                            root.navigateToUrl(item.url)
                         } else {
                             fileOps.openUrl(item.url)
                         }
