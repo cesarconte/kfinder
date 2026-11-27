@@ -1,3 +1,0 @@
-appstreamtest 1 0.00625244
-test_kfinder_sanity 1 0.00445081
----

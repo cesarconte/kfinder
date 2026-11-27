@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="/org/cesar/kfinder">
-    <file alias="qmldir">/home/cesar/Proyectos/kfinder/build/src/org/cesar/kfinder/qmldir</file>
-  </qresource>
-</RCC>
-
