@@ -42,7 +42,7 @@ CachyDialog {
                 Layout.fillWidth: true
 
                 CachyFormComboBoxDelegate {
-                    text: CachyI18n.i18n("Modo de visualización predeterminado")
+                    label: CachyI18n.i18n("Modo de visualización predeterminado")
                     model: [
                         CachyI18n.i18n("Como iconos"),
                         CachyI18n.i18n("Como lista"),
@@ -174,7 +174,7 @@ CachyDialog {
                 CachyFormDelegateSeparator {}
 
                 CachyFormComboBoxDelegate {
-                    text: CachyI18n.i18n("Perfil de atajos de teclado")
+                    label: CachyI18n.i18n("Perfil de atajos de teclado")
                     model: [
                         CachyI18n.i18n("Perfil Finder (Intro = Renombrar, Ctrl+↓ = Abrir)"),
                         CachyI18n.i18n("Perfil Dolphin (F2 = Renombrar, Intro = Abrir)")

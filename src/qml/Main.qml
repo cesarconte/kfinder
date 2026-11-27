@@ -23,6 +23,34 @@ CachyWindow {
 
     readonly property bool isSearching: fileModel.isSearching
     property bool showTerminalPanel: false
+    property var selectedItems: []
+    property var selectedUrls: []
+    property var activeItem: selectedItems.length > 0 ? selectedItems[0] : null
+
+    function getUrls(items) {
+        var list = [];
+        if (items && items.length > 0) {
+            for (var i = 0; i < items.length; ++i) {
+                if (items[i] && items[i].url) list.push(items[i].url);
+            }
+        }
+        return list;
+    }
+
+    function selectAllCurrentView() {
+        if (viewSwitcher.currentIndex === 0 && fileGrid) {
+            fileGrid.selectAll();
+        } else if (viewSwitcher.currentIndex === 1 && fileList) {
+            fileList.selectAll();
+        }
+    }
+
+    function handleFilesDropped(urls, destUrl, mouseX, mouseY) {
+        if (!urls || urls.length === 0 || !destUrl) return;
+        dropMenu.sourceUrls = urls;
+        dropMenu.targetUrl = destUrl;
+        dropMenu.popup(mapToItem(root.contentItem, mouseX, mouseY));
+    }
 
     Shortcut {
         sequence: "F4"
@@ -35,11 +63,140 @@ CachyWindow {
     }
 
     Shortcut {
+        sequence: "Ctrl+N"
+        onActivated: fileOps.newWindow(fileModel.currentUrl)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+N"
+        onActivated: fileOps.createNewFolder(fileModel.currentUrl)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+C"
+        onActivated: {
+            var urls = getUrls(root.selectedItems);
+            if (urls.length === 0 && root.activeItem && root.activeItem.url) urls = [root.activeItem.url];
+            if (urls.length > 0) fileOps.copy(urls);
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+V"
+        onActivated: fileOps.paste(fileModel.currentUrl)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+D"
+        onActivated: {
+            if (root.activeItem && root.activeItem.url) fileOps.duplicate(root.activeItem.url);
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Backspace"
+        onActivated: {
+            var urls = getUrls(root.selectedItems);
+            if (urls.length === 0 && root.activeItem && root.activeItem.url) urls = [root.activeItem.url];
+            if (urls.length > 0) fileOps.moveToTrash(urls);
+        }
+    }
+
+    Shortcut {
+        sequence: "Delete"
+        onActivated: {
+            var urls = getUrls(root.selectedItems);
+            if (urls.length === 0 && root.activeItem && root.activeItem.url) urls = [root.activeItem.url];
+            if (urls.length > 0) fileOps.moveToTrash(urls);
+        }
+    }
+
+    Shortcut {
+        sequence: "Shift+Delete"
+        onActivated: {
+            var urls = getUrls(root.selectedItems);
+            if (urls.length === 0 && root.activeItem && root.activeItem.url) urls = [root.activeItem.url];
+            if (urls.length > 0) fileOps.deletePermanently(urls);
+        }
+    }
+
+    Shortcut {
+        sequence: "Alt+Up"
+        onActivated: fileModel.goUp()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Up"
+        onActivated: fileModel.goUp()
+    }
+
+    Shortcut {
+        sequence: "Space"
+        onActivated: {
+            if (root.activeItem && root.activeItem.url) fileOps.quickLook(root.activeItem.url);
+        }
+    }
+
+    Shortcut {
+        sequence: "Return"
+        onActivated: {
+            if (!root.activeItem) return;
+            if (settingsManager.keyboardProfile === 0) {
+                // Finder profile: Return renames
+                renameDialog.targetUrl = root.activeItem.url;
+                renameDialog.currentName = root.activeItem.name || "";
+                renameDialog.open();
+            } else {
+                // Dolphin profile: Return opens
+                if (root.activeItem.isDirectory) fileModel.setUrl(root.activeItem.url);
+                else fileOps.openUrl(root.activeItem.url);
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "F2"
+        onActivated: {
+            if (root.activeItem && root.activeItem.url) {
+                renameDialog.targetUrl = root.activeItem.url;
+                renameDialog.currentName = root.activeItem.name || "";
+                renameDialog.open();
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Down"
+        onActivated: {
+            if (root.activeItem) {
+                if (root.activeItem.isDirectory) fileModel.setUrl(root.activeItem.url);
+                else fileOps.openUrl(root.activeItem.url);
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+O"
+        onActivated: {
+            if (root.activeItem) {
+                if (root.activeItem.isDirectory) fileModel.setUrl(root.activeItem.url);
+                else fileOps.openUrl(root.activeItem.url);
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+A"
+        onActivated: selectAllCurrentView()
+    }
+
+    Shortcut {
         sequence: "Ctrl+I"
         onActivated: {
-            if (contextMenu.targetItem) {
-                getInfoDialog.targetItem = contextMenu.targetItem
-                getInfoDialog.open()
+            var item = root.activeItem || contextMenu.targetItem;
+            if (item) {
+                getInfoDialog.targetItem = item;
+                getInfoDialog.open();
             }
         }
     }
@@ -87,6 +244,9 @@ CachyWindow {
                 }
             }
         }
+        onOpenWithRequested: (item) => {
+            if (item && item.url) fileOps.openWith(item.url)
+        }
         onQuickLookRequested: (item) => {
             if (item && item.url) fileOps.quickLook(item.url)
         }
@@ -96,15 +256,52 @@ CachyWindow {
                 getInfoDialog.open()
             }
         }
-        onMoveToTrashRequested: (item) => {
-            if (item && item.url) fileOps.moveToTrash([item.url])
-        }
-        onCopyRequested: (item) => {
-            if (item && item.url) fileOps.copy([item.url])
+        onRenameRequested: (item) => {
+            if (item && item.url) {
+                renameDialog.targetUrl = item.url
+                renameDialog.currentName = item.name || ""
+                renameDialog.open()
+            }
         }
         onDuplicateRequested: (item) => {
             if (item && item.url) fileOps.duplicate(item.url)
         }
+        onCompressRequested: (item) => {
+            if (item && item.url) fileOps.compressItems([item.url])
+        }
+        onCopyRequested: (item) => {
+            if (item && item.url) fileOps.copy([item.url])
+        }
+        onCopyPathRequested: (item) => {
+            if (item && item.url) fileOps.copyPath([item.url])
+        }
+        onOpenTerminalRequested: (item) => {
+            if (item && item.url) fileOps.openTerminal(item.isDirectory ? item.url : fileModel.currentUrl)
+        }
+        onMoveToTrashRequested: (item) => {
+            if (item && item.url) fileOps.moveToTrash([item.url])
+        }
+        onDeletePermanentlyRequested: (item) => {
+            if (item && item.url) fileOps.deletePermanently([item.url])
+        }
+        onTagRequested: (item, color) => {
+            if (item && item.url) {
+                fileOps.setTag(item.url, color)
+                fileModel.refresh()
+            }
+        }
+    }
+
+    DropActionMenu {
+        id: dropMenu
+        onCopyRequested: (sources, dest) => fileOps.copyItems(sources, dest)
+        onMoveRequested: (sources, dest) => fileOps.moveItems(sources, dest)
+        onLinkRequested: (sources, dest) => fileOps.linkItems(sources, dest)
+    }
+
+    RenameDialog {
+        id: renameDialog
+        onRenameConfirmed: (target, newName) => fileOps.rename(target, newName)
     }
 
     SettingsDialog {
@@ -174,12 +371,35 @@ CachyWindow {
             Platform.MenuItem {
                 text: CachyI18n.i18n("Nueva ventana")
                 shortcut: "Ctrl+N"
-                onTriggered: {}
+                onTriggered: fileOps.newWindow(fileModel.currentUrl)
             }
             Platform.MenuItem {
                 text: CachyI18n.i18n("Nueva carpeta")
                 shortcut: "Ctrl+Shift+N"
-                onTriggered: {}
+                onTriggered: fileOps.createNewFolder(fileModel.currentUrl)
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Nuevo archivo de texto")
+                onTriggered: fileOps.createNewFile(fileModel.currentUrl)
+            }
+            Platform.MenuSeparator {}
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Obtener información")
+                shortcut: "Ctrl+I"
+                onTriggered: {
+                    var it = root.activeItem || contextMenu.targetItem;
+                    if (it) {
+                        getInfoDialog.targetItem = it;
+                        getInfoDialog.open();
+                    }
+                }
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Duplicar")
+                shortcut: "Ctrl+D"
+                onTriggered: {
+                    if (root.activeItem && root.activeItem.url) fileOps.duplicate(root.activeItem.url);
+                }
             }
             Platform.MenuSeparator {}
             Platform.MenuItem {
@@ -203,6 +423,19 @@ CachyWindow {
             Platform.MenuItem {
                 text: CachyI18n.i18n("Copiar")
                 shortcut: "Ctrl+C"
+                onTriggered: {
+                    var urls = getUrls(root.selectedItems);
+                    if (urls.length === 0 && root.activeItem && root.activeItem.url) urls = [root.activeItem.url];
+                    if (urls.length > 0) fileOps.copy(urls);
+                }
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Copiar ruta")
+                onTriggered: {
+                    var urls = getUrls(root.selectedItems);
+                    if (urls.length === 0 && root.activeItem && root.activeItem.url) urls = [root.activeItem.url];
+                    if (urls.length > 0) fileOps.copyPath(urls);
+                }
             }
             Platform.MenuItem {
                 text: CachyI18n.i18n("Pegar")
@@ -212,6 +445,7 @@ CachyWindow {
             Platform.MenuItem {
                 text: CachyI18n.i18n("Seleccionar todo")
                 shortcut: "Ctrl+A"
+                onTriggered: selectAllCurrentView()
             }
         }
 
@@ -309,15 +543,30 @@ CachyWindow {
                 }
             }
 
-            delegate: CachySidebarItem {
+            delegate: Item {
                 width: placesList.width
-                text: model.text || ""
-                iconName: model.iconName || "folder"
-                selected: fileModel.currentUrl.toString() === model.url
-                accentSelected: false
-                onClicked: {
-                    if (model.url && model.url.length > 0) {
-                        fileModel.setUrl(model.url)
+                height: 36
+
+                DropArea {
+                    anchors.fill: parent
+                    onDropped: (drop) => {
+                        if (drop.hasUrls && model.url) {
+                            handleFilesDropped(drop.urls, model.url, drop.x, drop.y)
+                            drop.acceptProposedAction()
+                        }
+                    }
+                }
+
+                CachySidebarItem {
+                    anchors.fill: parent
+                    text: model.text || ""
+                    iconName: model.iconName || "folder"
+                    selected: fileModel.currentUrl.toString() === model.url
+                    accentSelected: false
+                    onClicked: {
+                        if (model.url && model.url.length > 0) {
+                            fileModel.setUrl(model.url)
+                        }
                     }
                 }
             }
@@ -454,49 +703,18 @@ CachyWindow {
                 Layout.fillHeight: true
 
                 // 1. Icon Grid View
-                GridView {
+                FileGridView {
                     id: fileGrid
                     anchors.fill: parent
-                    anchors.margins: CachyTheme.spacingMedium
-                    clip: true
-                    cellWidth: 110
-                    cellHeight: 120
                     model: fileModel
+                    currentUrl: fileModel.currentUrl
                     visible: viewSwitcher.currentIndex === 0 && fileModel.count > 0
 
-                    delegate: CachyGridItem {
-                        width: fileGrid.cellWidth - 10
-                        height: fileGrid.cellHeight - 10
-                        title: model.name || ""
-                        iconName: model.iconName || "unknown"
-                        badgeText: model.isDirectory ? "" : (model.sizeString || "")
-                        selected: false
-
-                        onDoubleClicked: {
-                            if (model.isDirectory) {
-                                fileModel.setUrl(model.url)
-                            } else {
-                                fileOps.openUrl(model.url)
-                            }
-                        }
-
-                        onContextMenuRequested: (x, y) => {
-                            contextMenu.targetItem = {
-                                name: model.name,
-                                url: model.url,
-                                isDirectory: model.isDirectory
-                            }
-                            contextMenu.popup(mapToItem(root.contentItem, x, y))
-                        }
+                    onItemClicked: (item) => {
+                        root.activeItem = item
+                        root.selectedItems = fileGrid.selectedItems
+                        root.selectedUrls = fileGrid.selectedUrls
                     }
-                }
-
-                // 2. Details List View
-                FileListView {
-                    anchors.fill: parent
-                    model: fileModel
-                    visible: viewSwitcher.currentIndex === 1 && fileModel.count > 0
-
                     onItemDoubleClicked: (item) => {
                         if (item.isDirectory) {
                             fileModel.setUrl(item.url)
@@ -504,10 +722,43 @@ CachyWindow {
                             fileOps.openUrl(item.url)
                         }
                     }
-
                     onItemContextMenuRequested: (item, x, y) => {
+                        root.activeItem = item
                         contextMenu.targetItem = item
                         contextMenu.popup(mapToItem(root.contentItem, x, y))
+                    }
+                    onFilesDropped: (urls, destination, x, y) => {
+                        handleFilesDropped(urls, destination, x, y)
+                    }
+                }
+
+                // 2. Details List View
+                FileListView {
+                    id: fileList
+                    anchors.fill: parent
+                    model: fileModel
+                    currentUrl: fileModel.currentUrl
+                    visible: viewSwitcher.currentIndex === 1 && fileModel.count > 0
+
+                    onItemClicked: (item) => {
+                        root.activeItem = item
+                        root.selectedItems = fileList.selectedItems
+                        root.selectedUrls = fileList.selectedUrls
+                    }
+                    onItemDoubleClicked: (item) => {
+                        if (item.isDirectory) {
+                            fileModel.setUrl(item.url)
+                        } else {
+                            fileOps.openUrl(item.url)
+                        }
+                    }
+                    onItemContextMenuRequested: (item, x, y) => {
+                        root.activeItem = item
+                        contextMenu.targetItem = item
+                        contextMenu.popup(mapToItem(root.contentItem, x, y))
+                    }
+                    onFilesDropped: (urls, destination, x, y) => {
+                        handleFilesDropped(urls, destination, x, y)
                     }
                 }
 
@@ -526,6 +777,7 @@ CachyWindow {
                     }
 
                     onItemContextMenuRequested: (item, x, y) => {
+                        root.activeItem = item
                         contextMenu.targetItem = item
                         contextMenu.popup(mapToItem(root.contentItem, x, y))
                     }

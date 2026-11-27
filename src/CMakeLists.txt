@@ -48,10 +48,13 @@ qt_add_qml_module(kfinder
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+        qml/FileGridView.qml
         qml/FileListView.qml
         qml/FileColumnView.qml
         qml/FileGalleryView.qml
         qml/FileContextMenu.qml
+        qml/DropActionMenu.qml
+        qml/RenameDialog.qml
         qml/PathBar.qml
         qml/ScopeBar.qml
         qml/GoToFolderDialog.qml
