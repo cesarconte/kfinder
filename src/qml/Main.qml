@@ -66,6 +66,15 @@ CachyWindow {
         }
     }
 
+    SettingsDialog {
+        id: settingsDialog
+    }
+
+    EmptyTrashAlert {
+        id: emptyTrashDialog
+        onConfirmed: fileOps.moveToTrash([]) // empty trash trigger
+    }
+
     GoToFolderDialog {
         id: goToDialog
         onFolderSelected: (path) => {

@@ -49,6 +49,8 @@ qt_add_qml_module(kfinder
         qml/PathBar.qml
         qml/ScopeBar.qml
         qml/GoToFolderDialog.qml
+        qml/SettingsDialog.qml
+        qml/EmptyTrashAlert.qml
 )
 
 install(TARGETS kfinder ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
