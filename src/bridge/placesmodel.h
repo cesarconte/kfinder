@@ -17,6 +17,7 @@ public:
         UrlRole = Qt::UserRole + 1,
         TextRole,
         IconNameRole,
+        GroupRole,
         IsGroupRole,
         IsDeviceRole,
         IsTeardownAllowedRole,

@@ -6,6 +6,10 @@ qt_add_executable(kfinder
     bridge/placesmodel.cpp
     bridge/fileoperations.h
     bridge/fileoperations.cpp
+    bridge/terminalbridge.h
+    bridge/terminalbridge.cpp
+    bridge/filemanager1adaptor.h
+    bridge/filemanager1adaptor.cpp
     core/fileitementry.h
 )
 
@@ -51,6 +55,9 @@ qt_add_qml_module(kfinder
         qml/GoToFolderDialog.qml
         qml/SettingsDialog.qml
         qml/EmptyTrashAlert.qml
+        qml/TerminalPanel.qml
+        qml/GetInfoDialog.qml
 )
 
 install(TARGETS kfinder ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+install(PROGRAMS org.cesar.kfinder.desktop DESTINATION ${KDE_INSTALL_APPDIR})

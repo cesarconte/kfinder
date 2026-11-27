@@ -3,6 +3,7 @@
 #include <QAbstractListModel>
 #include <QUrl>
 #include <QList>
+#include <QProcess>
 #include <KCoreDirLister>
 #include <KFileItem>
 #include "core/fileitementry.h"
@@ -18,6 +19,9 @@ class FileListModel : public QAbstractListModel
     Q_PROPERTY(bool showHiddenFiles READ showHiddenFiles WRITE setShowHiddenFiles NOTIFY showHiddenFilesChanged)
     Q_PROPERTY(int sortRole READ sortRole WRITE setSortRole NOTIFY sortRoleChanged)
     Q_PROPERTY(Qt::SortOrder sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
+    Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
+    Q_PROPERTY(int searchScope READ searchScope WRITE setSearchScope NOTIFY searchScopeChanged)
+    Q_PROPERTY(bool isSearching READ isSearching NOTIFY isSearchingChanged)
 
 public:
     enum Roles {
@@ -59,6 +63,16 @@ public:
     Qt::SortOrder sortOrder() const;
     void setSortOrder(Qt::SortOrder order);
 
+    QString filterText() const;
+    Q_INVOKABLE void setFilterText(const QString &text);
+
+    int searchScope() const;
+    Q_INVOKABLE void setSearchScope(int scope);
+
+    bool isSearching() const;
+
+    Q_INVOKABLE void triggerDeepSearch();
+
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void goUp();
     Q_INVOKABLE QVariantMap get(int index) const;
@@ -70,6 +84,9 @@ Q_SIGNALS:
     void showHiddenFilesChanged();
     void sortRoleChanged();
     void sortOrderChanged();
+    void filterTextChanged();
+    void searchScopeChanged();
+    void isSearchingChanged();
     void directoryLoaded();
 
 private Q_SLOTS:
@@ -78,18 +95,28 @@ private Q_SLOTS:
     void slotClear();
     void slotCompleted();
     void slotCanceled();
+    void slotSearchOutput();
+    void slotSearchFinished();
 
 private:
-    void sortEntries();
+    void applyFilterAndSort();
+    void startSearchProcess(const QString &baseDir);
+    void cancelSearchProcess();
     static FileItemEntry createEntry(const KFileItem &item);
+    static FileItemEntry createEntryFromPath(const QString &path);
 
     QUrl m_url;
     KCoreDirLister *m_dirLister{nullptr};
+    QList<FileItemEntry> m_rawEntries;
     QList<FileItemEntry> m_entries;
     bool m_loading{false};
     bool m_showHiddenFiles{false};
     int m_sortRole{NameRole};
     Qt::SortOrder m_sortOrder{Qt::AscendingOrder};
+
+    QString m_filterText;
+    int m_searchScope{1}; // 0 = Este equipo, 1 = Carpeta actual
+    QProcess *m_searchProcess{nullptr};
 };
 
 } // namespace KFinder

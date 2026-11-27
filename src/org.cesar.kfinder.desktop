@@ -1,0 +1,27 @@
+[Desktop Entry]
+Name=Finder
+Name[es]=Finder
+GenericName=File Manager
+GenericName[es]=Gestor de archivos
+Comment=Explore and manage files with macOS Golden Gate aesthetic
+Comment[es]=Explora y gestiona tus archivos con el estilo Golden Gate
+Exec=kfinder %U
+Icon=system-file-manager
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=Qt;KDE;System;FileManager;
+MimeType=inode/directory;
+Actions=NewWindow;OpenTerminal;
+
+[Desktop Action NewWindow]
+Name=New Window
+Name[es]=Nueva ventana
+Exec=kfinder
+Icon=window-new
+
+[Desktop Action OpenTerminal]
+Name=Open Terminal Here
+Name[es]=Abrir terminal aquí
+Exec=konsole
+Icon=utilities-terminal

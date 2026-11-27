@@ -35,6 +35,8 @@ QVariant PlacesModel::data(const QModelIndex &index, int role) const
         return m_places->url(srcIdx).toString();
     case IconNameRole:
         return m_places->icon(srcIdx).name();
+    case GroupRole:
+        return m_places->data(srcIdx, KFilePlacesModel::GroupRole);
     case IsGroupRole:
         return m_places->isGroupHidden(srcIdx);
     case IsDeviceRole:
@@ -54,6 +56,7 @@ QHash<int, QByteArray> PlacesModel::roleNames() const
         {UrlRole, "url"},
         {TextRole, "text"},
         {IconNameRole, "iconName"},
+        {GroupRole, "group"},
         {IsGroupRole, "isGroup"},
         {IsDeviceRole, "isDevice"},
         {IsTeardownAllowedRole, "isTeardownAllowed"},

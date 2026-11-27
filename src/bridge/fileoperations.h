@@ -22,6 +22,7 @@ public:
     Q_INVOKABLE void duplicate(const QUrl &url);
     Q_INVOKABLE void quickLook(const QUrl &url);
     Q_INVOKABLE void showProperties(const QUrl &url);
+    Q_INVOKABLE void openTerminal(const QUrl &url);
     Q_INVOKABLE void setTag(const QUrl &url, const QString &color);
 
 Q_SIGNALS:

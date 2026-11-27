@@ -1,5 +1,8 @@
 #include "filelistmodel.h"
 #include <QCollator>
+#include <QProcess>
+#include <QDir>
+#include <QFileInfo>
 #include <KFormat>
 #include <sys/xattr.h>
 
@@ -33,6 +36,7 @@ FileListModel::FileListModel(QObject *parent)
 
 FileListModel::~FileListModel()
 {
+    cancelSearchProcess();
     if (m_dirLister) {
         m_dirLister->stop();
     }
@@ -112,6 +116,13 @@ void FileListModel::setUrl(const QUrl &url)
 {
     if (m_url == url) return;
 
+    cancelSearchProcess();
+    if (!m_filterText.isEmpty()) {
+        m_filterText.clear();
+        Q_EMIT filterTextChanged();
+        Q_EMIT isSearchingChanged();
+    }
+
     m_url = url;
     Q_EMIT currentUrlChanged();
 
@@ -157,7 +168,7 @@ void FileListModel::setSortRole(int role)
     if (m_sortRole == role) return;
     m_sortRole = role;
     Q_EMIT sortRoleChanged();
-    sortEntries();
+    applyFilterAndSort();
 }
 
 Qt::SortOrder FileListModel::sortOrder() const
@@ -170,7 +181,71 @@ void FileListModel::setSortOrder(Qt::SortOrder order)
     if (m_sortOrder == order) return;
     m_sortOrder = order;
     Q_EMIT sortOrderChanged();
-    sortEntries();
+    applyFilterAndSort();
+}
+
+QString FileListModel::filterText() const
+{
+    return m_filterText;
+}
+
+void FileListModel::setFilterText(const QString &text)
+{
+    if (m_filterText == text) return;
+    bool wasSearching = isSearching();
+    m_filterText = text;
+    Q_EMIT filterTextChanged();
+    if (wasSearching != isSearching()) {
+        Q_EMIT isSearchingChanged();
+    }
+
+    if (m_filterText.trimmed().isEmpty()) {
+        cancelSearchProcess();
+        applyFilterAndSort();
+    } else {
+        if (m_searchScope == 0) {
+            startSearchProcess(QDir::homePath());
+        } else {
+            cancelSearchProcess();
+            applyFilterAndSort();
+        }
+    }
+}
+
+int FileListModel::searchScope() const
+{
+    return m_searchScope;
+}
+
+void FileListModel::setSearchScope(int scope)
+{
+    if (m_searchScope == scope) return;
+    m_searchScope = scope;
+    Q_EMIT searchScopeChanged();
+
+    if (isSearching()) {
+        if (m_searchScope == 0) {
+            startSearchProcess(QDir::homePath());
+        } else {
+            cancelSearchProcess();
+            applyFilterAndSort();
+        }
+    }
+}
+
+bool FileListModel::isSearching() const
+{
+    return !m_filterText.trimmed().isEmpty();
+}
+
+void FileListModel::triggerDeepSearch()
+{
+    if (m_filterText.trimmed().isEmpty()) return;
+    if (m_searchScope == 1 && m_url.isLocalFile()) {
+        startSearchProcess(m_url.toLocalFile());
+    } else {
+        startSearchProcess(QDir::homePath());
+    }
 }
 
 void FileListModel::refresh()
@@ -244,45 +319,44 @@ FileItemEntry FileListModel::createEntry(const KFileItem &item)
     return entry;
 }
 
+FileItemEntry FileListModel::createEntryFromPath(const QString &filePath)
+{
+    QUrl url = QUrl::fromLocalFile(filePath);
+    KFileItem item(url);
+    return createEntry(item);
+}
+
 void FileListModel::slotItemsAdded(const QUrl &/*directoryUrl*/, const KFileItemList &items)
 {
     if (items.isEmpty()) return;
 
-    QList<FileItemEntry> newEntries;
-    newEntries.reserve(items.size());
     for (const auto &item : items) {
-        newEntries.append(createEntry(item));
+        m_rawEntries.append(createEntry(item));
     }
 
-    beginInsertRows(QModelIndex(), m_entries.size(), m_entries.size() + newEntries.size() - 1);
-    m_entries.append(newEntries);
-    endInsertRows();
-
-    sortEntries();
-    Q_EMIT countChanged();
+    applyFilterAndSort();
 }
 
 void FileListModel::slotItemsDeleted(const KFileItemList &items)
 {
-    if (items.isEmpty() || m_entries.isEmpty()) return;
+    if (items.isEmpty() || m_rawEntries.isEmpty()) return;
 
     for (const auto &item : items) {
-        for (int i = 0; i < m_entries.size(); ++i) {
-            if (m_entries[i].item.url() == item.url()) {
-                beginRemoveRows(QModelIndex(), i, i);
-                m_entries.removeAt(i);
-                endRemoveRows();
+        for (int i = 0; i < m_rawEntries.size(); ++i) {
+            if (m_rawEntries[i].item.url() == item.url()) {
+                m_rawEntries.removeAt(i);
                 break;
             }
         }
     }
-    Q_EMIT countChanged();
+    applyFilterAndSort();
 }
 
 void FileListModel::slotClear()
 {
-    if (m_entries.isEmpty()) return;
+    cancelSearchProcess();
     beginResetModel();
+    m_rawEntries.clear();
     m_entries.clear();
     endResetModel();
     Q_EMIT countChanged();
@@ -301,51 +375,135 @@ void FileListModel::slotCanceled()
     Q_EMIT loadingChanged();
 }
 
-void FileListModel::sortEntries()
+void FileListModel::applyFilterAndSort()
 {
-    if (m_entries.size() <= 1) return;
-
     beginResetModel();
-    QCollator collator;
-    collator.setNumericMode(true);
-    collator.setCaseSensitivity(Qt::CaseInsensitive);
-
-    std::sort(m_entries.begin(), m_entries.end(), [this, &collator](const FileItemEntry &a, const FileItemEntry &b) {
-        if (a.isDirectory != b.isDirectory) {
-            return a.isDirectory > b.isDirectory;
-        }
-
-        int cmp = 0;
-        switch (m_sortRole) {
-        case SizeBytesRole:
-            if (a.sizeBytes != b.sizeBytes) {
-                return m_sortOrder == Qt::AscendingOrder ? (a.sizeBytes < b.sizeBytes) : (a.sizeBytes > b.sizeBytes);
+    if (m_filterText.trimmed().isEmpty()) {
+        m_entries = m_rawEntries;
+    } else if (m_searchScope == 1 && !m_searchProcess) {
+        m_entries.clear();
+        const QString term = m_filterText.trimmed();
+        for (const auto &entry : m_rawEntries) {
+            if (entry.name.contains(term, Qt::CaseInsensitive)) {
+                m_entries.append(entry);
             }
-            break;
-        case ModifiedDateRole:
-            if (a.modifiedTime != b.modifiedTime) {
-                return m_sortOrder == Qt::AscendingOrder ? (a.modifiedTime < b.modifiedTime) : (a.modifiedTime > b.modifiedTime);
-            }
-            break;
-        case CreatedDateRole:
-            if (a.createdTime != b.createdTime) {
-                return m_sortOrder == Qt::AscendingOrder ? (a.createdTime < b.createdTime) : (a.createdTime > b.createdTime);
-            }
-            break;
-        case NameRole:
-        default:
-            cmp = collator.compare(a.name, b.name);
-            break;
         }
+    }
 
-        if (cmp == 0) {
-            cmp = collator.compare(a.name, b.name);
-        }
+    if (m_entries.size() > 1) {
+        QCollator collator;
+        collator.setNumericMode(true);
+        collator.setCaseSensitivity(Qt::CaseInsensitive);
 
-        return m_sortOrder == Qt::AscendingOrder ? (cmp < 0) : (cmp > 0);
-    });
+        std::sort(m_entries.begin(), m_entries.end(), [this, &collator](const FileItemEntry &a, const FileItemEntry &b) {
+            if (a.isDirectory != b.isDirectory) {
+                return a.isDirectory > b.isDirectory;
+            }
+
+            int cmp = 0;
+            switch (m_sortRole) {
+            case SizeBytesRole:
+                if (a.sizeBytes != b.sizeBytes) {
+                    return m_sortOrder == Qt::AscendingOrder ? (a.sizeBytes < b.sizeBytes) : (a.sizeBytes > b.sizeBytes);
+                }
+                break;
+            case ModifiedDateRole:
+                if (a.modifiedTime != b.modifiedTime) {
+                    return m_sortOrder == Qt::AscendingOrder ? (a.modifiedTime < b.modifiedTime) : (a.modifiedTime > b.modifiedTime);
+                }
+                break;
+            case CreatedDateRole:
+                if (a.createdTime != b.createdTime) {
+                    return m_sortOrder == Qt::AscendingOrder ? (a.createdTime < b.createdTime) : (a.createdTime > b.createdTime);
+                }
+                break;
+            case NameRole:
+            default:
+                cmp = collator.compare(a.name, b.name);
+                break;
+            }
+
+            if (cmp == 0) {
+                cmp = collator.compare(a.name, b.name);
+            }
+
+            return m_sortOrder == Qt::AscendingOrder ? (cmp < 0) : (cmp > 0);
+        });
+    }
 
     endResetModel();
+    Q_EMIT countChanged();
+}
+
+void FileListModel::startSearchProcess(const QString &baseDir)
+{
+    cancelSearchProcess();
+
+    if (m_filterText.trimmed().isEmpty()) return;
+
+    m_searchProcess = new QProcess(this);
+    m_loading = true;
+    Q_EMIT loadingChanged();
+
+    beginResetModel();
+    m_entries.clear();
+    endResetModel();
+    Q_EMIT countChanged();
+
+    connect(m_searchProcess, &QProcess::readyReadStandardOutput, this, &FileListModel::slotSearchOutput);
+    connect(m_searchProcess, &QProcess::finished, this, &FileListModel::slotSearchFinished);
+
+    QStringList args;
+    args << QStringLiteral("--hidden")
+         << QStringLiteral("-I")
+         << QStringLiteral("--max-results") << QStringLiteral("300")
+         << m_filterText.trimmed()
+         << baseDir;
+
+    m_searchProcess->start(QStringLiteral("fd"), args);
+}
+
+void FileListModel::cancelSearchProcess()
+{
+    if (m_searchProcess) {
+        m_searchProcess->disconnect(this);
+        m_searchProcess->kill();
+        m_searchProcess->deleteLater();
+        m_searchProcess = nullptr;
+    }
+}
+
+void FileListModel::slotSearchOutput()
+{
+    if (!m_searchProcess) return;
+
+    QByteArray data = m_searchProcess->readAllStandardOutput();
+    QList<QByteArray> lines = data.split('\n');
+    QList<FileItemEntry> batch;
+    batch.reserve(lines.size());
+
+    for (const auto &line : lines) {
+        QString path = QString::fromUtf8(line).trimmed();
+        if (path.isEmpty()) continue;
+        batch.append(createEntryFromPath(path));
+    }
+
+    if (!batch.isEmpty()) {
+        beginInsertRows(QModelIndex(), m_entries.size(), m_entries.size() + batch.size() - 1);
+        m_entries.append(batch);
+        endInsertRows();
+        Q_EMIT countChanged();
+    }
+}
+
+void FileListModel::slotSearchFinished()
+{
+    m_loading = false;
+    Q_EMIT loadingChanged();
+    if (m_searchProcess) {
+        m_searchProcess->deleteLater();
+        m_searchProcess = nullptr;
+    }
 }
 
 } // namespace KFinder

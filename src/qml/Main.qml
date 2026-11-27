@@ -21,12 +21,40 @@ CachyWindow {
     sidebarCollapsible: true
     sidebarWidthExpanded: 200
 
-    property bool isSearching: false
+    readonly property bool isSearching: fileModel.isSearching
+    property bool showTerminalPanel: false
+
+    Shortcut {
+        sequence: "F4"
+        onActivated: root.showTerminalPanel = !root.showTerminalPanel
+    }
+
+    Shortcut {
+        sequence: "Shift+F4"
+        onActivated: fileOps.openTerminal(fileModel.currentUrl)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+I"
+        onActivated: {
+            if (contextMenu.targetItem) {
+                getInfoDialog.targetItem = contextMenu.targetItem
+                getInfoDialog.open()
+            }
+        }
+    }
 
     FileListModel {
         id: fileModel
         Component.onCompleted: {
-            fileModel.setUrl("file:///home/cesar")
+            fileModel.setUrl(typeof initialUrl !== "undefined" && initialUrl ? initialUrl : "file:///home/cesar")
+        }
+    }
+
+    function navigateToUrl(urlStr) {
+        if (urlStr && urlStr.length > 0) {
+            fileModel.setUrl(urlStr)
+            root.requestActivate()
         }
     }
 
@@ -53,7 +81,10 @@ CachyWindow {
             if (item && item.url) fileOps.quickLook(item.url)
         }
         onGetInfoRequested: (item) => {
-            if (item && item.url) fileOps.showProperties(item.url)
+            if (item && item.url) {
+                getInfoDialog.targetItem = item
+                getInfoDialog.open()
+            }
         }
         onMoveToTrashRequested: (item) => {
             if (item && item.url) fileOps.moveToTrash([item.url])
@@ -73,6 +104,16 @@ CachyWindow {
     EmptyTrashAlert {
         id: emptyTrashDialog
         onConfirmed: fileOps.moveToTrash([]) // empty trash trigger
+    }
+
+    GetInfoDialog {
+        id: getInfoDialog
+        onTagChanged: (color) => {
+            if (targetItem && targetItem.url) {
+                fileOps.setTag(targetItem.url, color)
+                fileModel.refresh()
+            }
+        }
     }
 
     GoToFolderDialog {
@@ -179,6 +220,19 @@ CachyWindow {
                 shortcut: "Ctrl+4"
                 onTriggered: viewSwitcher.currentIndex = 3
             }
+            Platform.MenuSeparator {}
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Panel de terminal")
+                shortcut: "F4"
+                checkable: true
+                checked: root.showTerminalPanel
+                onTriggered: root.showTerminalPanel = !root.showTerminalPanel
+            }
+            Platform.MenuItem {
+                text: CachyI18n.i18n("Abrir en Konsole")
+                shortcut: "Shift+F4"
+                onTriggered: fileOps.openTerminal(fileModel.currentUrl)
+            }
         }
 
         Platform.Menu {
@@ -224,6 +278,20 @@ CachyWindow {
             model: placesModel
             boundsBehavior: Flickable.StopAtBounds
 
+            section.property: "group"
+            section.criteria: ViewSection.FullString
+            section.delegate: Item {
+                width: placesList.width
+                height: 28
+                visible: section && section.length > 0
+                CachySectionHeader {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: section
+                }
+            }
+
             delegate: CachySidebarItem {
                 width: placesList.width
                 text: model.text || ""
@@ -234,6 +302,46 @@ CachyWindow {
                     if (model.url && model.url.length > 0) {
                         fileModel.setUrl(model.url)
                     }
+                }
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+            height: 24
+            CachySectionHeader {
+                anchors.left: parent.left
+                anchors.leftMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+                text: CachyI18n.i18n("Etiquetas")
+            }
+        }
+
+        ListView {
+            id: tagsList
+            Layout.fillWidth: true
+            implicitHeight: 7 * 32
+            interactive: false
+            boundsBehavior: Flickable.StopAtBounds
+            model: [
+                { name: CachyI18n.i18n("Rojo"), color: "#ff453a", tag: "red" },
+                { name: CachyI18n.i18n("Naranja"), color: "#ff9f0a", tag: "orange" },
+                { name: CachyI18n.i18n("Amarillo"), color: "#ffd60a", tag: "yellow" },
+                { name: CachyI18n.i18n("Verde"), color: "#30d158", tag: "green" },
+                { name: CachyI18n.i18n("Azul"), color: "#0a84ff", tag: "blue" },
+                { name: CachyI18n.i18n("Púrpura"), color: "#bf5af2", tag: "purple" },
+                { name: CachyI18n.i18n("Gris"), color: "#8e8e93", tag: "gray" }
+            ]
+
+            delegate: CachySidebarItem {
+                width: tagsList.width
+                text: modelData.name
+                circularIconBadge: true
+                iconColor: modelData.color
+                iconGlyph: "●"
+                selected: false
+                onClicked: {
+                    fileModel.setFilterText(modelData.tag)
                 }
             }
         }
@@ -298,9 +406,9 @@ CachyWindow {
             placeholderText: CachyI18n.i18n("Search")
             pillStyle: true
             Layout.preferredWidth: 160
-            onAccepted: {
-                root.isSearching = text.length > 0
-            }
+            text: fileModel.filterText
+            onTextChanged: fileModel.setFilterText(text)
+            onAccepted: fileModel.triggerDeepSearch()
         }
     }
 
@@ -316,8 +424,10 @@ CachyWindow {
             // Scope Bar (visible when search is active)
             ScopeBar {
                 Layout.fillWidth: true
-                visible: root.isSearching
+                visible: fileModel.isSearching || (searchField.text && searchField.text.length > 0)
                 currentFolderName: fileModel.currentUrl ? (fileModel.currentUrl.toString().split("/").filter(Boolean).pop() || "/") : "/"
+                scopeIndex: fileModel.searchScope
+                onScopeChanged: (index) => fileModel.setSearchScope(index)
             }
 
             // View containers
@@ -434,6 +544,18 @@ CachyWindow {
                     iconName: "folder"
                     text: CachyI18n.i18n("Carpeta vacía")
                 }
+            }
+
+            // Embedded Terminal Panel (F4)
+            TerminalPanel {
+                id: terminalPanel
+                Layout.fillWidth: true
+                visible: root.showTerminalPanel
+                workingDirectory: (fileModel.currentUrl && fileModel.currentUrl.toString().startsWith("file://"))
+                                  ? fileModel.currentUrl.toString().replace("file://", "")
+                                  : ""
+                onCloseRequested: root.showTerminalPanel = false
+                onOpenExternalRequested: fileOps.openTerminal(fileModel.currentUrl)
             }
 
             // Bottom PathBar

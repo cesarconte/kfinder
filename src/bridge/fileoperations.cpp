@@ -11,6 +11,7 @@
 #include <QGuiApplication>
 #include <QMimeData>
 #include <QProcess>
+#include <QDir>
 #include <sys/xattr.h>
 
 namespace KFinder {
@@ -105,6 +106,14 @@ void FileOperations::showProperties(const QUrl &url)
 {
     if (!url.isValid()) return;
     KPropertiesDialog::showDialog(url);
+}
+
+void FileOperations::openTerminal(const QUrl &url)
+{
+    QString path = url.isLocalFile() ? url.toLocalFile() : QDir::homePath();
+    auto *job = new KIO::CommandLauncherJob(QStringLiteral("konsole"), {QStringLiteral("--workdir"), path});
+    job->setUiDelegate(KIO::createDefaultJobUiDelegate(KJobUiDelegate::AutoHandlingEnabled, nullptr));
+    job->start();
 }
 
 void FileOperations::setTag(const QUrl &url, const QString &color)
