@@ -22,3 +22,24 @@ target_link_libraries(test_model_spike PRIVATE
 )
 
 add_test(NAME test_model_spike COMMAND test_model_spike)
+
+add_executable(test_filelistmodel
+    test_filelistmodel.cpp
+    ../src/bridge/filelistmodel.cpp
+)
+
+target_include_directories(test_filelistmodel PRIVATE
+    ../src
+)
+
+target_link_libraries(test_filelistmodel PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Test
+    KF6::CoreAddons
+    KF6::I18n
+    KF6::KIOCore
+    KF6::KIOGui
+)
+
+add_test(NAME test_filelistmodel COMMAND test_filelistmodel)

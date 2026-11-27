@@ -6,6 +6,8 @@
 #include <KLocalizedString>
 #include <KDBusService>
 #include <KCrash>
+#include "bridge/filelistmodel.h"
+#include "bridge/placesmodel.h"
 
 int main(int argc, char *argv[])
 {
@@ -24,6 +26,9 @@ int main(int argc, char *argv[])
     QApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("system-file-manager")));
 
     KDBusService service(KDBusService::Unique);
+
+    qmlRegisterType<KFinder::FileListModel>("org.cesar.kfinder", 1, 0, "FileListModel");
+    qmlRegisterType<KFinder::PlacesModel>("org.cesar.kfinder", 1, 0, "PlacesModel");
 
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/org/cesar/kfinder/qml/Main.qml"));

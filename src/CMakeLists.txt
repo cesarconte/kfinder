@@ -1,5 +1,10 @@
 qt_add_executable(kfinder
     main.cpp
+    bridge/filelistmodel.h
+    bridge/filelistmodel.cpp
+    bridge/placesmodel.h
+    bridge/placesmodel.cpp
+    core/fileitementry.h
 )
 
 target_include_directories(kfinder PRIVATE
@@ -18,8 +23,10 @@ target_link_libraries(kfinder PRIVATE
     KF6::I18n
     KF6::WindowSystem
     KF6::IconThemes
+    KF6::KIOCore
     KF6::KIOGui
     KF6::KIOWidgets
+    KF6::KIOFileWidgets
     KF6::Solid
     KF6::FileMetaData
     KF6::DBusAddons

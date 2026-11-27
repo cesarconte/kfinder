@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import CachyOS.UI
+import org.cesar.kfinder
 
 CachyWindow {
     id: root
 
-    title: CachyI18n.i18n("Finder")
+    title: fileModel.currentUrl ? fileModel.currentUrl.toString().split("/").pop() || CachyI18n.i18n("Finder") : CachyI18n.i18n("Finder")
     width: CachyTheme.windowWidthSettings
     height: CachyTheme.windowHeightSettings
     minimumWidth: 620
@@ -17,66 +18,60 @@ CachyWindow {
     showWindowFrame: true
     contentPadded: false
     sidebarCollapsible: true
-    sidebarWidthExpanded: 180
+    sidebarWidthExpanded: 200
+
+    FileListModel {
+        id: fileModel
+        currentUrl: "file://" + CachyTheme.distroName // fallback or initial directory
+        Component.onCompleted: {
+            currentUrl = "file://" + Qt.application.arguments[0] || "file:///home/cesar"
+            // Default to user home
+            fileModel.setUrl("file:///home/cesar")
+        }
+    }
+
+    PlacesModel {
+        id: placesModel
+    }
 
     sidebar: ColumnLayout {
-        spacing: CachyTheme.spacingSmall
+        spacing: 0
         anchors.fill: parent
-        anchors.margins: CachyTheme.spacingMedium
 
-        CachySidebarItem {
+        ListView {
+            id: placesList
             Layout.fillWidth: true
-            text: CachyI18n.i18n("Recents")
-            iconName: "clock"
-            selected: true
-            accentSelected: false
-        }
+            Layout.fillHeight: true
+            clip: true
+            model: placesModel
+            boundsBehavior: Flickable.StopAtBounds
 
-        CachySidebarItem {
-            Layout.fillWidth: true
-            text: CachyI18n.i18n("Applications")
-            iconName: "apps"
-            selected: false
-            accentSelected: false
+            delegate: CachySidebarItem {
+                width: placesList.width
+                text: model.text || ""
+                iconName: model.iconName || "folder"
+                selected: fileModel.currentUrl.toString() === model.url
+                accentSelected: false
+                onClicked: {
+                    if (model.url && model.url.length > 0) {
+                        fileModel.setUrl(model.url)
+                    }
+                }
+            }
         }
-
-        CachySidebarItem {
-            Layout.fillWidth: true
-            text: CachyI18n.i18n("Desktop")
-            iconName: "desktop"
-            selected: false
-            accentSelected: false
-        }
-
-        CachySidebarItem {
-            Layout.fillWidth: true
-            text: CachyI18n.i18n("Documents")
-            iconName: "folder"
-            selected: false
-            accentSelected: false
-        }
-
-        CachySidebarItem {
-            Layout.fillWidth: true
-            text: CachyI18n.i18n("Downloads")
-            iconName: "download"
-            selected: false
-            accentSelected: false
-        }
-
-        Item { Layout.fillHeight: true }
     }
 
     headerLeading: RowLayout {
         spacing: CachyTheme.spacingSmall
 
         CachyNavigationButtons {
-            canGoBack: false
+            canGoBack: true
             canGoForward: false
+            onBackClicked: fileModel.goUp()
         }
 
         CachyHeading {
-            text: CachyI18n.i18n("Finder")
+            text: fileModel.currentUrl ? (fileModel.currentUrl.toString().split("/").filter(Boolean).pop() || "/") : "/"
             level: 4
             color: CachyPalette.text
             Layout.minimumWidth: 0
@@ -126,15 +121,48 @@ CachyWindow {
         }
     }
 
+    // Main Content Area
     Rectangle {
         anchors.fill: parent
         color: CachyPalette.contentBackground
 
+        GridView {
+            id: fileGrid
+            anchors.fill: parent
+            anchors.margins: CachyTheme.spacingMedium
+            clip: true
+            cellWidth: 110
+            cellHeight: 120
+            model: fileModel
+            visible: fileModel.count > 0
+
+            delegate: CachyGridItem {
+                width: fileGrid.cellWidth - 10
+                height: fileGrid.cellHeight - 10
+                title: model.name || ""
+                iconName: model.iconName || "unknown"
+                badgeText: model.isDirectory ? "" : (model.sizeString || "")
+                selected: false
+
+                onDoubleClicked: {
+                    if (model.isDirectory) {
+                        fileModel.setUrl(model.url)
+                    }
+                }
+            }
+        }
+
+        CachyBusyIndicator {
+            anchors.centerIn: parent
+            running: fileModel.loading
+            visible: running
+        }
+
         CachyPlaceholderMessage {
             anchors.centerIn: parent
+            visible: !fileModel.loading && fileModel.count === 0
             iconName: "folder"
             text: CachyI18n.i18n("Carpeta vacía")
-            
         }
     }
 }
