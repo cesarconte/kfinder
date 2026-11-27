@@ -685,130 +685,193 @@ CachyWindow {
         }
     }
 
-    sidebar: ColumnLayout {
-        spacing: 0
+    sidebar: Flickable {
         anchors.fill: parent
+        contentWidth: width
+        contentHeight: sidebarColumn.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
 
-        ListView {
-            id: placesList
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            clip: true
-            model: placesModel
-            boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar {
+            policy: ScrollBar.AsNeeded
+        }
 
-            section.property: "group"
-            section.criteria: ViewSection.FullString
-            section.delegate: Item {
-                width: placesList.width
-                height: 28
-                visible: section && section.length > 0
+        Column {
+            id: sidebarColumn
+            width: parent.width
+            spacing: 2
+            topPadding: 8
+            bottomPadding: 16
+
+            ListView {
+                id: placesList
+                width: parent.width
+                implicitHeight: contentHeight
+                interactive: false
+                model: placesModel
+
+                section.property: "group"
+                section.criteria: ViewSection.FullString
+                section.delegate: Item {
+                    width: placesList.width
+                    height: 24
+                    visible: section && section.length > 0
+                    CachySectionHeader {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: section
+                    }
+                }
+
+                delegate: Item {
+                    width: placesList.width
+                    height: 32
+
+                    DropArea {
+                        anchors.fill: parent
+                        onDropped: (drop) => {
+                            if (drop.hasUrls && model.url) {
+                                handleFilesDropped(drop.urls, model.url, drop.x, drop.y)
+                                drop.acceptProposedAction()
+                            }
+                        }
+                    }
+
+                    CachySidebarItem {
+                        anchors.fill: parent
+                        anchors.leftMargin: 6
+                        anchors.rightMargin: 6
+                        text: model.text || ""
+                        iconName: model.iconName || "folder"
+                        selected: fileModel.currentUrl.toString() === model.url
+                        accentSelected: false
+                        onClicked: {
+                            if (model.url && model.url.length > 0) {
+                                root.navigateToUrl(model.url)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item {
+                width: parent.width
+                height: 22
                 CachySectionHeader {
                     anchors.left: parent.left
                     anchors.leftMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    text: section
+                    text: CachyI18n.i18n("Etiquetas")
                 }
             }
 
-            delegate: Item {
-                width: placesList.width
-                height: 36
+            ListView {
+                id: tagsList
+                width: parent.width
+                implicitHeight: 7 * 28
+                interactive: false
+                boundsBehavior: Flickable.StopAtBounds
+                model: [
+                    { name: CachyI18n.i18n("Rojo"), color: "#ff453a", tag: "red" },
+                    { name: CachyI18n.i18n("Naranja"), color: "#ff9f0a", tag: "orange" },
+                    { name: CachyI18n.i18n("Amarillo"), color: "#ffd60a", tag: "yellow" },
+                    { name: CachyI18n.i18n("Verde"), color: "#30d158", tag: "green" },
+                    { name: CachyI18n.i18n("Azul"), color: "#0a84ff", tag: "blue" },
+                    { name: CachyI18n.i18n("Púrpura"), color: "#bf5af2", tag: "purple" },
+                    { name: CachyI18n.i18n("Gris"), color: "#8e8e93", tag: "gray" }
+                ]
 
-                DropArea {
-                    anchors.fill: parent
-                    onDropped: (drop) => {
-                        if (drop.hasUrls && model.url) {
-                            handleFilesDropped(drop.urls, model.url, drop.x, drop.y)
-                            drop.acceptProposedAction()
+                delegate: Rectangle {
+                    width: tagsList.width - 12
+                    height: 26
+                    anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
+                    radius: 6
+                    color: tagHover.hovered ? (CachyPalette.isDark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.05)) : "transparent"
+
+                    HoverHandler {
+                        id: tagHover
+                        cursorShape: Qt.PointingHandCursor
+                    }
+
+                    TapHandler {
+                        onTapped: fileModel.setFilterText(modelData.tag)
+                    }
+
+                    Row {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8
+                        spacing: 10
+
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 10
+                            height: 10
+                            radius: 5
+                            color: modelData.color
+                            border.width: 0.5
+                            border.color: Qt.rgba(0, 0, 0, 0.20)
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.name
+                            font.pixelSize: 13
+                            color: CachyPalette.text
                         }
                     }
-                }
-
-                CachySidebarItem {
-                    anchors.fill: parent
-                    text: model.text || ""
-                    iconName: model.iconName || "folder"
-                    selected: fileModel.currentUrl.toString() === model.url
-                    accentSelected: false
-                    onClicked: {
-                        if (model.url && model.url.length > 0) {
-                            root.navigateToUrl(model.url)
-                        }
-                    }
-                }
-            }
-        }
-
-        Item {
-            Layout.fillWidth: true
-            height: 24
-            CachySectionHeader {
-                anchors.left: parent.left
-                anchors.leftMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
-                text: CachyI18n.i18n("Etiquetas")
-            }
-        }
-
-        ListView {
-            id: tagsList
-            Layout.fillWidth: true
-            implicitHeight: 7 * 32
-            interactive: false
-            boundsBehavior: Flickable.StopAtBounds
-            model: [
-                { name: CachyI18n.i18n("Rojo"), color: "#ff453a", tag: "red" },
-                { name: CachyI18n.i18n("Naranja"), color: "#ff9f0a", tag: "orange" },
-                { name: CachyI18n.i18n("Amarillo"), color: "#ffd60a", tag: "yellow" },
-                { name: CachyI18n.i18n("Verde"), color: "#30d158", tag: "green" },
-                { name: CachyI18n.i18n("Azul"), color: "#0a84ff", tag: "blue" },
-                { name: CachyI18n.i18n("Púrpura"), color: "#bf5af2", tag: "purple" },
-                { name: CachyI18n.i18n("Gris"), color: "#8e8e93", tag: "gray" }
-            ]
-
-            delegate: CachySidebarItem {
-                width: tagsList.width
-                text: modelData.name
-                circularIconBadge: true
-                iconColor: modelData.color
-                iconGlyph: "●"
-                selected: false
-                onClicked: {
-                    fileModel.setFilterText(modelData.tag)
                 }
             }
         }
     }
 
-    headerLeading: RowLayout {
-        spacing: CachyTheme.spacingSmall
+    headerLeading: Row {
+        spacing: 12
+        anchors.verticalCenter: parent.verticalCenter
 
         CachyNavigationButtons {
+            anchors.verticalCenter: parent.verticalCenter
             canGoBack: root.historyBack.length > 0
             canGoForward: root.historyForward.length > 0
             onBackClicked: root.goBack()
             onForwardClicked: root.goForward()
         }
 
-        CachyHeading {
-            text: fileModel.currentUrl ? (fileModel.currentUrl.toString().split("/").filter(Boolean).pop() || "/") : "/"
-            level: 4
-            color: CachyPalette.text
-            Layout.minimumWidth: 0
+        Row {
+            spacing: 6
+            anchors.verticalCenter: parent.verticalCenter
+
+            CachyIcon {
+                anchors.verticalCenter: parent.verticalCenter
+                name: "inode-directory"
+                size: 16
+                colored: false
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: fileModel.currentUrl ? (fileModel.currentUrl.toString().split("/").filter(Boolean).pop() || "/") : "/"
+                font.pixelSize: 13
+                font.weight: Font.DemiBold
+                color: CachyPalette.text
+            }
         }
     }
 
-    headerCenter: RowLayout {
-        spacing: CachyTheme.spacingSmall
+    headerCenter: Item {
+        anchors.centerIn: parent
+        width: viewSwitcher.width
+        height: viewSwitcher.height
 
         CachySegmentedControl {
             id: viewSwitcher
+            anchors.centerIn: parent
             model: [
-                { icon: "grid", text: "" },
-                { icon: "list", text: "" },
-                { icon: "table", text: "" },
-                { icon: "eye", text: "" }
+                { icon: "grid", text: "", tooltip: CachyI18n.i18n("Como iconos") },
+                { icon: "list", text: "", tooltip: CachyI18n.i18n("Como lista") },
+                { icon: "table", text: "", tooltip: CachyI18n.i18n("Como columnas") },
+                { icon: "eye", text: "", tooltip: CachyI18n.i18n("Como galería") }
             ]
             currentIndex: settingsManager.defaultViewMode
             pillStyle: true
@@ -816,32 +879,49 @@ CachyWindow {
         }
     }
 
-    headerActions: RowLayout {
-        spacing: CachyTheme.spacingSmall
+    headerActions: Row {
+        spacing: 8
+        anchors.verticalCenter: parent.verticalCenter
 
         CachyToolbarGroup {
+            anchors.verticalCenter: parent.verticalCenter
             CachyToolbarButton {
                 iconName: "share"
-                tooltipText: CachyI18n.i18n("Share")
+                tooltipText: CachyI18n.i18n("Compartir")
                 pillStyle: false
+                onClicked: {
+                    if (root.activeItem && root.activeItem.url) fileOps.openWith(root.activeItem.url)
+                }
             }
             CachyToolbarButton {
                 iconName: "tag"
-                tooltipText: CachyI18n.i18n("Edit tags")
+                tooltipText: CachyI18n.i18n("Etiquetas")
                 pillStyle: false
+                onClicked: {
+                    if (root.activeItem && root.activeItem.url) {
+                        getInfoDialog.targetItem = root.activeItem
+                        getInfoDialog.open()
+                    }
+                }
             }
             CachyToolbarButton {
                 iconName: "more-horizontal"
-                tooltipText: CachyI18n.i18n("Action")
+                tooltipText: CachyI18n.i18n("Acciones")
                 pillStyle: false
+                onClicked: {
+                    if (contextMenu.targetItem) {
+                        contextMenu.popup(mapToItem(root.contentItem, 0, 0))
+                    }
+                }
             }
         }
 
         CachySearchField {
             id: searchField
-            placeholderText: CachyI18n.i18n("Search")
+            anchors.verticalCenter: parent.verticalCenter
+            placeholderText: CachyI18n.i18n("Buscar")
             pillStyle: true
-            Layout.preferredWidth: 160
+            width: 170
             text: fileModel.filterText
             onTextChanged: fileModel.setFilterText(text)
             onAccepted: fileModel.triggerDeepSearch()

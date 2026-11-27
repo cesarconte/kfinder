@@ -10,9 +10,16 @@ Rectangle {
     signal segmentClicked(string segmentUrl)
 
     height: 26
-    color: CachyPalette.isDark ? Qt.rgba(0, 0, 0, 0.35) : Qt.rgba(0, 0, 0, 0.05)
-    border.width: 1
-    border.color: CachyPalette.hardDividerColor
+    color: CachyPalette.isDark ? Qt.rgba(0, 0, 0, 0.22) : Qt.rgba(0, 0, 0, 0.04)
+
+    // Top 1px specular border
+    Rectangle {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 1
+        color: CachyPalette.specularBorder
+    }
 
     readonly property var segments: {
         var str = root.pathUrl.replace("file://", "")
@@ -30,38 +37,60 @@ Rectangle {
         return result
     }
 
-    RowLayout {
-        anchors.fill: parent
-        anchors.leftMargin: CachyTheme.spacingSmall
-        anchors.rightMargin: CachyTheme.spacingSmall
-        spacing: CachyTheme.spacingTiny
-
-        CachyIcon {
-            name: "folder"
-            size: 14
-            colored: false
-        }
+    Row {
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.left: parent.left
+        anchors.leftMargin: 12
+        spacing: 4
 
         Repeater {
             model: root.segments
 
-            RowLayout {
-                spacing: CachyTheme.spacingTiny
+            Row {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
 
-                CachyLabel {
-                    text: modelData.name
-                    color: CachyPalette.textSecondary
-                    font.pixelSize: 11
+                Rectangle {
+                    id: crumb
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: 20
+                    radius: 4
+                    color: crumbHover.hovered ? (CachyPalette.isDark ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.06)) : "transparent"
+                    width: crumbContent.width + 8
 
-                    MouseArea {
-                        anchors.fill: parent
+                    HoverHandler {
+                        id: crumbHover
                         cursorShape: Qt.PointingHandCursor
-                        hoverEnabled: true
-                        onClicked: root.segmentClicked(modelData.url)
+                    }
+
+                    TapHandler {
+                        onTapped: root.segmentClicked(modelData.url)
+                    }
+
+                    Row {
+                        id: crumbContent
+                        anchors.centerIn: parent
+                        spacing: 4
+
+                        CachyIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: index === 0 ? "drive-harddisk" : "inode-directory"
+                            size: 13
+                            colored: false
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.name
+                            color: crumbHover.hovered ? CachyPalette.text : CachyPalette.textSecondary
+                            font.pixelSize: 11
+                            font.weight: index === root.segments.length - 1 ? Font.DemiBold : Font.Normal
+                        }
                     }
                 }
 
-                CachyLabel {
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
                     visible: index < root.segments.length - 1
                     text: "›"
                     color: CachyPalette.textMuted
@@ -69,7 +98,5 @@ Rectangle {
                 }
             }
         }
-
-        Item { Layout.fillWidth: true }
     }
 }

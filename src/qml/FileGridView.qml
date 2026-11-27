@@ -158,10 +158,10 @@ Item {
     GridView {
         id: gridView
         anchors.fill: parent
-        anchors.margins: CachyTheme.spacingMedium
+        anchors.margins: 20
         clip: true
-        cellWidth: 110
-        cellHeight: 120
+        cellWidth: 120
+        cellHeight: 126
         model: root.model
         focus: true
 
@@ -188,8 +188,9 @@ Item {
             CachyGridItem {
                 id: gridItem
                 anchors.centerIn: parent
-                width: gridView.cellWidth - 10
+                width: gridView.cellWidth - 12
                 height: gridView.cellHeight - 10
+                iconSize: 64
                 title: model.name || ""
                 iconName: model.iconName || "inode-directory"
                 badgeText: model.isDirectory ? "" : (model.sizeString || "")
