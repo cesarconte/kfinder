@@ -10,6 +10,8 @@ qt_add_executable(kfinder
     bridge/terminalbridge.cpp
     bridge/filemanager1adaptor.h
     bridge/filemanager1adaptor.cpp
+    core/settingsmanager.h
+    core/settingsmanager.cpp
     core/fileitementry.h
 )
 

@@ -13,6 +13,7 @@
 #include "bridge/placesmodel.h"
 #include "bridge/terminalbridge.h"
 #include "bridge/filemanager1adaptor.h"
+#include "core/settingsmanager.h"
 
 int main(int argc, char *argv[])
 {
@@ -48,6 +49,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<KFinder::PlacesModel>("org.cesar.kfinder", 1, 0, "PlacesModel");
     qmlRegisterType<KFinder::FileOperations>("org.cesar.kfinder", 1, 0, "FileOperations");
     qmlRegisterType<KFinder::TerminalBridge>("org.cesar.kfinder", 1, 0, "TerminalBridge");
+    qmlRegisterType<KFinder::SettingsManager>("org.cesar.kfinder", 1, 0, "SettingsManager");
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("initialUrl"), initialUrl);

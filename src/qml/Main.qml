@@ -44,8 +44,18 @@ CachyWindow {
         }
     }
 
+    Shortcut {
+        sequence: "Ctrl+,"
+        onActivated: settingsDialog.open()
+    }
+
+    SettingsManager {
+        id: settingsManager
+    }
+
     FileListModel {
         id: fileModel
+        showHiddenFiles: settingsManager.showHiddenFiles
         Component.onCompleted: {
             fileModel.setUrl(typeof initialUrl !== "undefined" && initialUrl ? initialUrl : "file:///home/cesar")
         }
@@ -99,6 +109,7 @@ CachyWindow {
 
     SettingsDialog {
         id: settingsDialog
+        settings: settingsManager
     }
 
     EmptyTrashAlert {
@@ -142,13 +153,19 @@ CachyWindow {
             Platform.MenuItem {
                 text: CachyI18n.i18n("Ajustes...")
                 shortcut: "Ctrl+,"
-                onTriggered: {}
+                onTriggered: settingsDialog.open()
             }
             Platform.MenuSeparator {}
             Platform.MenuItem {
                 text: CachyI18n.i18n("Vaciar papelera...")
                 shortcut: "Ctrl+Shift+Backspace"
-                onTriggered: {}
+                onTriggered: {
+                    if (settingsManager.confirmEmptyTrash) {
+                        emptyTrashDialog.open()
+                    } else {
+                        fileOps.moveToTrash([])
+                    }
+                }
             }
         }
 
@@ -375,8 +392,9 @@ CachyWindow {
                 { icon: "table", text: "" },
                 { icon: "eye", text: "" }
             ]
-            currentIndex: 0
+            currentIndex: settingsManager.defaultViewMode
             pillStyle: true
+            onCurrentIndexChanged: settingsManager.defaultViewMode = currentIndex
         }
     }
 
