@@ -1,0 +1,14 @@
+-rootPath
+/home/cesar/Proyectos/kfinder/src
+-cmake-output
+-output-file
+/home/cesar/Proyectos/kfinder/build/src/.qt/qml_imports/kfinder_build.cmake
+-importPath
+/home/cesar/Proyectos/kfinder/build/src
+-importPath
+/home/cesar/Proyectos/kfinder/build/src/org/cesar/kfinder
+-importPath
+/usr/lib/qt6/qml
+-qrcFiles
+/home/cesar/Proyectos/kfinder/build/src/.qt/rcc/qmake_org_cesar_kfinder.qrc
+/home/cesar/Proyectos/kfinder/build/src/.qt/rcc/kfinder_raw_qml_0.qrc

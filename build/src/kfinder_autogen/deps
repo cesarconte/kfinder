@@ -1,0 +1,8 @@
+kfinder_autogen/timestamp: \
+	/home/cesar/Proyectos/kfinder/build/src/.qt/qml_imports/kfinder_conf.cmake \
+	/home/cesar/Proyectos/kfinder/src/CMakeLists.txt \
+	/home/cesar/Proyectos/kfinder/src/main.cpp \
+	/usr/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in \
+	/usr/lib/cmake/Qt6Qml/Qt6QmlModuleDirMappingTemplate.qrc.in \
+	/usr/lib/cmake/Qt6Qml/Qt6qmldirTemplate.cmake.in \
+	/usr/bin/cmake

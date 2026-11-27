@@ -1,0 +1,149 @@
+{
+	"BUILD_DIR" : "/home/cesar/Proyectos/kfinder/build/src/kfinder_autogen",
+	"CMAKE_BINARY_DIR" : "/home/cesar/Proyectos/kfinder/build",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/cesar/Proyectos/kfinder/build/src",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/cesar/Proyectos/kfinder/src",
+	"CMAKE_EXECUTABLE" : "/usr/bin/cmake",
+	"CMAKE_LIST_FILES" : 
+	[
+		"/home/cesar/Proyectos/kfinder/src/CMakeLists.txt",
+		"/usr/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
+		"/usr/lib/cmake/Qt6Qml/Qt6QmlModuleDirMappingTemplate.qrc.in",
+		"/usr/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
+		"/usr/lib/cmake/Qt6Qml/Qt6qmldirTemplate.cmake.in",
+		"/home/cesar/Proyectos/kfinder/build/src/.qt/qml_imports/kfinder_conf.cmake"
+	],
+	"CMAKE_SOURCE_DIR" : "/home/cesar/Proyectos/kfinder",
+	"CROSS_CONFIG" : false,
+	"CXX_MODULE_UNITS" : [],
+	"DEP_FILE" : "/home/cesar/Proyectos/kfinder/build/src/kfinder_autogen/deps",
+	"DEP_FILE_RULE_NAME" : "kfinder_autogen/timestamp",
+	"HEADERS" : [],
+	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
+	"INCLUDE_DIR" : "/home/cesar/Proyectos/kfinder/build/src/kfinder_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/cesar/Proyectos/kfinder/build/src/kfinder_autogen/mocs_compilation.cpp",
+	"MOC_DEFINITIONS" : 
+	[
+		"KCOREADDONS_LIB",
+		"QT_CORE_LIB",
+		"QT_DBUS_LIB",
+		"QT_GUI_LIB",
+		"QT_NETWORK_LIB",
+		"QT_NO_CAST_FROM_ASCII",
+		"QT_NO_CAST_FROM_BYTEARRAY",
+		"QT_NO_CAST_TO_ASCII",
+		"QT_NO_DEBUG",
+		"QT_NO_FOREACH",
+		"QT_NO_KEYWORDS",
+		"QT_NO_NARROWING_CONVERSIONS_IN_CONNECT",
+		"QT_NO_URL_CAST_FROM_STRING",
+		"QT_OPENGL_LIB",
+		"QT_QMLINTEGRATION_LIB",
+		"QT_QML_LIB",
+		"QT_QUICKCONTROLS2_LIB",
+		"QT_QUICK_LIB",
+		"QT_STRICT_ITERATORS",
+		"QT_USE_QSTRINGBUILDER",
+		"QT_WIDGETS_LIB",
+		"_GNU_SOURCE",
+		"_LARGEFILE64_SOURCE"
+	],
+	"MOC_DEPEND_FILTERS" : 
+	[
+		[
+			"Q_PLUGIN_METADATA",
+			"[\n][ \t]*Q_PLUGIN_METADATA[ \t]*\\([^\\)]*FILE[ \t]*\"([^\"]+)\""
+		]
+	],
+	"MOC_INCLUDES" : 
+	[
+		"/home/cesar/Proyectos/kfinder/build/src",
+		"/home/cesar/Proyectos/kfinder/src",
+		"/usr/include/qt6/QtQml",
+		"/usr/include/qt6",
+		"/usr/include/qt6/QtCore",
+		"/usr/lib/qt6/mkspecs/linux-g++",
+		"/usr/include/qt6/QtQmlIntegration",
+		"/usr/include/qt6/QtNetwork",
+		"/usr/include/qt6/QtGui",
+		"/usr/include/qt6/QtQuick",
+		"/usr/include/qt6/QtOpenGL",
+		"/usr/include/qt6/QtQuickControls2",
+		"/usr/include/qt6/QtWidgets",
+		"/usr/include/qt6/QtDBus",
+		"/usr/include/KF6/KCoreAddons",
+		"/usr/include/KF6/KI18n",
+		"/usr/include/KF6/KWindowSystem",
+		"/usr/include/KF6/KIconThemes",
+		"/usr/include/KF6/KIOGui",
+		"/usr/include/KF6/KIOCore",
+		"/usr/include/KF6/KIO",
+		"/usr/include/KF6/KConfig",
+		"/usr/include/KF6/KConfigCore",
+		"/usr/include/KF6/KService",
+		"/usr/include/KF6/KIOWidgets",
+		"/usr/include/KF6/KJobWidgets",
+		"/usr/include/KF6/KCompletion",
+		"/usr/include/KF6/KWidgetsAddons",
+		"/usr/include/KF6/Solid",
+		"/usr/include/KF6/KFileMetaData",
+		"/usr/include/KF6/KDBusAddons",
+		"/usr/include/KF6/KCrash",
+		"/usr/include/KF6/KNotifications",
+		"/usr/include/CachyOSUI",
+		"/usr/include",
+		"/usr/include/c++/16",
+		"/usr/include/c++/16/x86_64-pc-linux-gnu",
+		"/usr/include/c++/16/backward",
+		"/usr/lib/gcc/x86_64-pc-linux-gnu/16/include",
+		"/usr/local/include"
+	],
+	"MOC_MACRO_NAMES" : 
+	[
+		"Q_OBJECT",
+		"Q_GADGET",
+		"Q_NAMESPACE",
+		"Q_NAMESPACE_EXPORT",
+		"Q_GADGET_EXPORT",
+		"Q_ENUM_NS",
+		"K_PLUGIN_FACTORY",
+		"K_PLUGIN_CLASS",
+		"K_PLUGIN_FACTORY_WITH_JSON",
+		"K_PLUGIN_CLASS_WITH_JSON"
+	],
+	"MOC_OPTIONS" : [ "--output-json" ],
+	"MOC_PATH_PREFIX" : false,
+	"MOC_PREDEFS_CMD" : 
+	[
+		"/usr/bin/c++",
+		"-std=c++23",
+		"-w",
+		"-dM",
+		"-E",
+		"/usr/share/cmake/Modules/CMakeCXXCompilerABI.cpp"
+	],
+	"MOC_PREDEFS_FILE" : "/home/cesar/Proyectos/kfinder/build/src/kfinder_autogen/moc_predefs.h",
+	"MOC_RELAXED_MODE" : false,
+	"MOC_SKIP" : 
+	[
+		"/home/cesar/Proyectos/kfinder/build/src/.qt/rcc/qrc_kfinder_raw_qml_0.cpp",
+		"/home/cesar/Proyectos/kfinder/build/src/.qt/rcc/qrc_qmake_org_cesar_kfinder.cpp",
+		"/home/cesar/Proyectos/kfinder/build/src/.rcc/qmlcache/kfinder_qml_Main_qml.cpp",
+		"/home/cesar/Proyectos/kfinder/build/src/.rcc/qmlcache/kfinder_qmlcache_loader.cpp",
+		"/home/cesar/Proyectos/kfinder/build/src/kfinder_qmltyperegistrations.cpp"
+	],
+	"MULTI_CONFIG" : false,
+	"PARALLEL" : 14,
+	"PARSE_CACHE_FILE" : "/home/cesar/Proyectos/kfinder/build/src/CMakeFiles/kfinder_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "/usr/lib/qt6/moc",
+	"QT_UIC_EXECUTABLE" : "",
+	"QT_VERSION_MAJOR" : 6,
+	"QT_VERSION_MINOR" : 12,
+	"SETTINGS_FILE" : "/home/cesar/Proyectos/kfinder/build/src/CMakeFiles/kfinder_autogen.dir/AutogenUsed.txt",
+	"SOURCES" : 
+	[
+		[ "/home/cesar/Proyectos/kfinder/src/main.cpp", "Mu", null ]
+	],
+	"USE_BETTER_GRAPH" : true,
+	"VERBOSITY" : 0
+}

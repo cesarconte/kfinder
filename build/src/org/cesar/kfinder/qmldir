@@ -1,0 +1,7 @@
+module org.cesar.kfinder
+export 1.0
+typeinfo kfinder.qmltypes
+prefer :/org/cesar/kfinder/
+Main 1.0 qml/Main.qml
+depends QtQuick
+

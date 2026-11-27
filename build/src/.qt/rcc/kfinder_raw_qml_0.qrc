@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/org/cesar/kfinder/">
+    <file alias="qml/Main.qml">/home/cesar/Proyectos/kfinder/src/qml/Main.qml</file>
+  </qresource>
+</RCC>
+

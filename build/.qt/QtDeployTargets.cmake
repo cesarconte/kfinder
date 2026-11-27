@@ -1,0 +1,5 @@
+set(__QT_DEPLOY_TARGETS "kfinder;test_kfinder_sanity")
+set(__QT_DEPLOY_TARGET_kfinder_FILE "/home/cesar/Proyectos/kfinder/build/bin/kfinder")
+set(__QT_DEPLOY_TARGET_kfinder_TYPE EXECUTABLE)
+set(__QT_DEPLOY_TARGET_test_kfinder_sanity_FILE "/home/cesar/Proyectos/kfinder/build/bin/test_kfinder_sanity")
+set(__QT_DEPLOY_TARGET_test_kfinder_sanity_TYPE EXECUTABLE)

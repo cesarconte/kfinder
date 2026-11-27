@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/">
+    <file alias="/org/cesar/kfinder">/home/cesar/Proyectos/kfinder/build/src/org/cesar/kfinder</file>
+
+  </qresource>
+</RCC>
